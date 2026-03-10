@@ -266,6 +266,55 @@
   overflow-x: auto;
 }
 
+.parent-match-log-panel {
+  overflow-x: auto;
+}
+
+.parent-match-log-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 920px;
+}
+
+.parent-match-log-table thead th {
+  padding: 16px 14px;
+  text-align: center;
+  background: rgba(231, 240, 230, 0.82);
+  border-bottom: 1px solid rgba(196, 210, 199, 0.9);
+  font-size: 0.95rem;
+}
+
+.parent-match-log-table tbody td {
+  padding: 16px 14px;
+  text-align: center;
+  border-bottom: 1px solid rgba(217, 222, 234, 0.85);
+  background: rgba(255, 255, 255, 0.76);
+}
+
+.parent-match-log-score {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 120px;
+  padding: 10px 14px;
+  border-radius: 16px;
+  font-weight: 700;
+  border: 1px solid rgba(217, 222, 234, 0.95);
+  background: rgba(255, 255, 255, 0.95);
+}
+
+.parent-match-log-score.is-win {
+  color: #0c7d3b;
+  border-color: rgba(86, 180, 122, 0.38);
+  background: rgba(234, 248, 238, 0.96);
+}
+
+.parent-match-log-score.is-loss {
+  color: #b03636;
+  border-color: rgba(219, 135, 135, 0.38);
+  background: rgba(252, 238, 238, 0.96);
+}
+
 .parent-match-cell {
   cursor: default;
   pointer-events: none;

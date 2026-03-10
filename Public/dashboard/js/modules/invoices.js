@@ -1,4 +1,5 @@
 import { api } from "../services/api.js";
+import { bindDebouncedSearch } from "../utils/search.js";
 
 function getToday() {
   return new Date().toISOString().slice(0, 10);
@@ -26,6 +27,11 @@ const state = {
   generationResult: null
 };
 
+const MONTH_OPTIONS = Array.from({ length: 12 }, (_, index) => ({
+  value: String(index + 1),
+  label: new Date(2026, index, 1).toLocaleDateString("en-IN", { month: "short" })
+}));
+
 function getApp() {
   return document.getElementById("app");
 }
@@ -41,6 +47,10 @@ function getCurrentAcademyId() {
 
 function canChooseAcademy() {
   return getCurrentRole() === "super_admin";
+}
+
+function canOverrideInvoices() {
+  return ["super_admin", "academy_admin", "head_coach"].includes(getCurrentRole());
 }
 
 function escapeHtml(value) {
@@ -79,9 +89,19 @@ function formatMonthLabel(month, year) {
   }
 
   return new Date(Number(year), Number(month) - 1, 1).toLocaleDateString("en-IN", {
-    month: "long",
+    month: "short",
     year: "numeric"
   });
+}
+
+function renderMonthOptions(selectedValue = "") {
+  return MONTH_OPTIONS.map(
+    (month) => `
+      <option value="${month.value}" ${String(selectedValue) === month.value ? "selected" : ""}>
+        ${escapeHtml(month.label)}
+      </option>
+    `
+  ).join("");
 }
 
 function renderNotice() {
@@ -227,9 +247,9 @@ function renderGenerator() {
         }
         <div class="two-column-grid">
           <label>Invoice Month
-            <input name="invoice_month" type="number" min="1" max="12" value="${escapeHtml(
-              state.generator.invoice_month
-            )}" required />
+            <select name="invoice_month" required>
+              ${renderMonthOptions(state.generator.invoice_month)}
+            </select>
           </label>
           <label>Invoice Year
             <input name="invoice_year" type="number" min="2024" max="2100" value="${escapeHtml(
@@ -288,7 +308,21 @@ function renderInvoiceTable() {
                   <td>${escapeHtml(invoice.category_name || "-")}</td>
                   <td>${escapeHtml(invoice.billing_label || formatMonthLabel(invoice.invoice_month, invoice.invoice_year))}</td>
                   <td>${escapeHtml(invoice.fee_plan_name || "Player override")}</td>
-                  <td>${escapeHtml(formatCurrency(invoice.total_amount || 0))}</td>
+                  <td>
+                    <div class="invoice-amount-cell">
+                      <strong>${escapeHtml(formatCurrency(invoice.total_amount || 0))}</strong>
+                      <span class="table-subtext">Base ${escapeHtml(
+                        formatCurrency(invoice.calculated_amount ?? invoice.amount ?? 0)
+                      )}</span>
+                      ${
+                        invoice.override_amount !== null && invoice.override_amount !== undefined
+                          ? `<span class="table-subtext">Override ${escapeHtml(
+                              formatCurrency(invoice.override_amount || 0)
+                            )}</span>`
+                          : ""
+                      }
+                    </div>
+                  </td>
                   <td>${escapeHtml(formatCurrency(invoice.paid_amount || 0))}</td>
                   <td>${escapeHtml(formatCurrency(invoice.balance_amount || 0))}</td>
                   <td><span class="pill pill-${escapeHtml(invoice.status || "inactive")}">${escapeHtml(invoice.status || "-")}</span></td>
@@ -301,6 +335,68 @@ function renderInvoiceTable() {
         </tbody>
       </table>
     </div>
+  `;
+}
+
+function renderOverridePanel() {
+  const invoices = getFilteredInvoices();
+
+  if (!invoices.length) {
+    return "";
+  }
+
+  return `
+    <section class="panel invoice-override-panel">
+      <div class="panel-head">
+        <div>
+          <p class="eyebrow">Admin Override</p>
+          <h3>Adjust an invoice amount</h3>
+        </div>
+      </div>
+      <form id="invoiceOverrideForm" class="stack-form">
+        <label>Invoice
+          <select name="invoice_id" required>
+            <option value="">Select invoice</option>
+            ${invoices
+              .map(
+                (invoice) => `
+                  <option value="${invoice.id}">
+                    ${escapeHtml(invoice.player_name || "-")} · ${escapeHtml(
+                      invoice.billing_label || formatMonthLabel(invoice.invoice_month, invoice.invoice_year)
+                    )} · ${escapeHtml(formatCurrency(invoice.total_amount || 0))}
+                  </option>
+                `
+              )
+              .join("")}
+          </select>
+        </label>
+        <div class="two-column-grid">
+          <label>Override Amount
+            <input name="override_amount" type="number" min="0" step="0.01" required />
+          </label>
+          <label>Status
+            <select name="status">
+              <option value="">Keep current</option>
+              <option value="issued">Issued</option>
+              <option value="partial">Partial</option>
+              <option value="paid">Paid</option>
+              <option value="overdue">Overdue</option>
+            </select>
+          </label>
+        </div>
+        <label>Reason (audit)
+          <textarea
+            name="override_reason"
+            rows="3"
+            placeholder="Explain why this invoice amount was manually adjusted"
+            required
+          ></textarea>
+        </label>
+        <div class="table-actions">
+          <button class="btn btn-primary" type="submit">Save Manual Override</button>
+        </div>
+      </form>
+    </section>
   `;
 }
 
@@ -356,9 +452,9 @@ function renderPage() {
               `
               : ""
           }
-          <input id="invoiceMonthFilter" type="number" min="1" max="12" value="${escapeHtml(
-            state.filters.month
-          )}" />
+          <select id="invoiceMonthFilter">
+            ${renderMonthOptions(state.filters.month)}
+          </select>
           <input id="invoiceYearFilter" type="number" min="2024" max="2100" value="${escapeHtml(
             state.filters.year
           )}" />
@@ -372,6 +468,7 @@ function renderPage() {
           <button class="btn btn-ghost" type="button" id="refreshInvoices">Refresh</button>
         </div>
         ${renderInvoiceTable()}
+        ${canOverrideInvoices() ? renderOverridePanel() : ""}
       </section>
     </section>
   `;
@@ -450,6 +547,39 @@ async function generateInvoices(event) {
   }
 }
 
+async function saveInvoiceOverride(event) {
+  event.preventDefault();
+
+  try {
+    const form = event.currentTarget;
+    const invoiceId = form.invoice_id.value;
+
+    if (!invoiceId) {
+      throw new Error("Please select an invoice");
+    }
+
+    const payload = {
+      override_amount: Number(form.override_amount.value),
+      override_reason: String(form.override_reason.value || "").trim()
+    };
+
+    if (!payload.override_reason) {
+      throw new Error("Override reason is required");
+    }
+
+    if (form.status.value) {
+      payload.status = form.status.value;
+    }
+
+    await api.patch(`/invoices/${invoiceId}`, payload);
+    setNotice("Invoice override saved.", "success");
+    await loadInvoices();
+  } catch (error) {
+    setNotice(error.message || "Unable to save invoice override", "danger");
+    renderPage();
+  }
+}
+
 function bindEvents() {
   document
     .querySelector('[data-action="dismiss-invoice-notice"]')
@@ -459,9 +589,10 @@ function bindEvents() {
     });
 
   document.getElementById("invoiceGeneratorForm")?.addEventListener("submit", generateInvoices);
+  document.getElementById("invoiceOverrideForm")?.addEventListener("submit", saveInvoiceOverride);
 
-  document.getElementById("invoiceSearch")?.addEventListener("input", (event) => {
-    state.filters.search = event.target.value;
+  bindDebouncedSearch(document.getElementById("invoiceSearch"), (value) => {
+    state.filters.search = value;
     renderPage();
   });
 

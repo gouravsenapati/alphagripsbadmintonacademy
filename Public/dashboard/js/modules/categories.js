@@ -1,4 +1,5 @@
 import { api } from "../services/api.js";
+import { bindDebouncedSearch } from "../utils/search.js";
 
 const state = {
   categories: [],
@@ -39,6 +40,10 @@ function escapeHtml(value) {
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#39;");
+}
+
+function hasText(value) {
+  return value !== null && value !== undefined && String(value).trim() !== "";
 }
 
 function clearNotice() {
@@ -382,8 +387,8 @@ function bindEvents() {
       renderPage();
     });
 
-  document.getElementById("categorySearch")?.addEventListener("input", (event) => {
-    state.filters.search = event.target.value;
+  bindDebouncedSearch(document.getElementById("categorySearch"), (value) => {
+    state.filters.search = value;
     renderPage();
   });
 

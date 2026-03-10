@@ -1,4 +1,5 @@
 import { api } from "../services/api.js";
+import { bindDebouncedSearch } from "../utils/search.js";
 
 const state = {
   receipts: [],
@@ -227,8 +228,8 @@ function bindEvents() {
       renderPage();
     });
 
-  document.getElementById("receiptSearch")?.addEventListener("input", (event) => {
-    state.filters.search = event.target.value;
+  bindDebouncedSearch(document.getElementById("receiptSearch"), (value) => {
+    state.filters.search = value;
     renderPage();
   });
 

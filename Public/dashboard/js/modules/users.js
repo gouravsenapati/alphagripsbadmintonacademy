@@ -1,4 +1,5 @@
 import { api } from "../services/api.js";
+import { bindDebouncedSearch } from "../utils/search.js";
 
 const USER_MANAGER_ROLES = new Set(["super_admin", "head_coach", "academy_admin"]);
 
@@ -819,8 +820,8 @@ function bindEvents() {
       renderUsersPage();
     });
 
-  document.getElementById("userSearch")?.addEventListener("input", (event) => {
-    state.filters.search = event.target.value;
+  bindDebouncedSearch(document.getElementById("userSearch"), (value) => {
+    state.filters.search = value;
     renderUsersPage();
   });
 

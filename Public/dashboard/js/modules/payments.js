@@ -1,4 +1,5 @@
 import { api } from "../services/api.js";
+import { bindDebouncedSearch } from "../utils/search.js";
 
 const state = {
   payments: [],
@@ -442,8 +443,8 @@ function bindEvents() {
       renderPage();
     });
 
-  document.getElementById("paymentSearch")?.addEventListener("input", (event) => {
-    state.filters.search = event.target.value;
+  bindDebouncedSearch(document.getElementById("paymentSearch"), (value) => {
+    state.filters.search = value;
     renderPage();
   });
 

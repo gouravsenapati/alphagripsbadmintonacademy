@@ -1,4 +1,5 @@
 import { api } from "../services/api.js";
+import { bindDebouncedSearch } from "../utils/search.js";
 
 const state = {
   feePlans: [],
@@ -554,8 +555,8 @@ function bindEvents() {
       renderPage();
     });
 
-  document.getElementById("feePlanSearch")?.addEventListener("input", (event) => {
-    state.filters.search = event.target.value;
+  bindDebouncedSearch(document.getElementById("feePlanSearch"), (value) => {
+    state.filters.search = value;
     renderPage();
   });
 

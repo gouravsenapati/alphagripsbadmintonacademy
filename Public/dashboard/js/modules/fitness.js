@@ -1,4 +1,5 @@
 import { api } from "../services/api.js";
+import { bindDebouncedSearch } from "../utils/search.js";
 
 function getToday() {
   return new Date().toISOString().slice(0, 10);
@@ -1013,8 +1014,8 @@ function bindEvents() {
     renderPage();
   });
 
-  document.getElementById("fitnessSummarySearch")?.addEventListener("input", (event) => {
-    state.summarySearch = event.target.value;
+  bindDebouncedSearch(document.getElementById("fitnessSummarySearch"), (value) => {
+    state.summarySearch = value;
     renderPage();
   });
 

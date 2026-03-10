@@ -168,6 +168,14 @@ function renderParentHero() {
         >
           Main Match Matrix
         </button>
+        <button
+          class="parent-section-tab ${state.activeView === "match-log" ? "active" : ""}"
+          type="button"
+          data-action="select-parent-view"
+          data-view="match-log"
+        >
+          Player Match Log
+        </button>
       </div>
     </section>
   `;
@@ -641,6 +649,75 @@ function renderMatches(card) {
   `;
 }
 
+function renderMatchLog(card) {
+  const matches = card?.academy_matches || { summary: {}, match_log: [] };
+  const matchLog = matches.match_log || [];
+
+  return `
+    <section class="panel">
+      <div class="panel-head">
+        <div>
+          <p class="eyebrow">Player Match Log</p>
+          <h3>All academy scores</h3>
+        </div>
+      </div>
+      <div class="summary-strip compact">
+        <div><span>Total</span><strong>${escapeHtml(String(matches.summary.total_matches || 0))}</strong></div>
+        <div><span>Wins</span><strong>${escapeHtml(String(matches.summary.wins || 0))}</strong></div>
+        <div><span>Losses</span><strong>${escapeHtml(String(matches.summary.losses || 0))}</strong></div>
+      </div>
+      ${
+        matchLog.length
+          ? `
+            <div class="table-container parent-match-log-panel">
+              <table class="parent-match-log-table">
+                <thead>
+                  <tr>
+                    <th>Date</th>
+                    <th>Player 1</th>
+                    <th>Category 1</th>
+                    <th>Player 2</th>
+                    <th>Category 2</th>
+                    <th>Score</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${matchLog
+                    .map(
+                      (match) => `
+                        <tr>
+                          <td>${escapeHtml(formatDate(match.match_date))}</td>
+                          <td>${escapeHtml(match.player1_name || "-")}</td>
+                          <td>${escapeHtml(match.player1_category_name || "-")}</td>
+                          <td>${escapeHtml(match.player2_name || "-")}</td>
+                          <td>${escapeHtml(match.player2_category_name || "-")}</td>
+                          <td>
+                            <span class="parent-match-log-score ${
+                              String(match.result_label || "").toLowerCase() === "won"
+                                ? "is-win"
+                                : "is-loss"
+                            }">
+                              ${escapeHtml(match.display_score || "-")}
+                            </span>
+                          </td>
+                        </tr>
+                      `
+                    )
+                    .join("")}
+                </tbody>
+              </table>
+            </div>
+          `
+          : `
+            <div class="empty-panel compact parent-empty">
+              <p>No academy match results recorded yet.</p>
+            </div>
+          `
+      }
+    </section>
+  `;
+}
+
 function renderInvoices(card) {
   const invoices = card?.invoices || { summary: {}, invoices: [] };
   const currentInvoice = getCurrentMonthInvoice(card);
@@ -738,6 +815,12 @@ function renderDashboard() {
             ${renderAcademyMatrix(state.dashboard)}
           </div>
         `
+        : state.activeView === "match-log"
+          ? `
+            <div class="parent-matrix-view">
+              ${renderMatchLog(state.dashboard)}
+            </div>
+          `
         : `
           <div class="parent-overview-grid">
             ${renderChildProfile(state.dashboard)}
@@ -924,7 +1007,9 @@ function bindActions() {
 
   document.querySelectorAll('[data-action="select-parent-view"]').forEach((button) => {
     button.onclick = () => {
-      state.activeView = button.dataset.view === "match-matrix" ? "match-matrix" : "overview";
+      state.activeView = ["match-matrix", "match-log"].includes(button.dataset.view)
+        ? button.dataset.view
+        : "overview";
       renderDashboard();
     };
   });

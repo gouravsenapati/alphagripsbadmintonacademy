@@ -453,30 +453,35 @@ async function buildAcademyMatchesSection(player, academyId) {
     throw error;
   }
 
-  const opponentIds = [...new Set(
-    (matches || []).map((match) =>
-      Number(match.player1_id) === Number(player.id) ? match.player2_id : match.player1_id
-    ).filter(Boolean)
-  )];
-  const categoryIds = [...new Set((matches || []).map((match) => match.category_id).filter(Boolean))];
+  const playerIds = [
+    ...new Set(
+      (matches || [])
+        .flatMap((match) => [match.player1_id, match.player2_id])
+        .filter(Boolean)
+    )
+  ];
+  const matchCategoryIds = [...new Set((matches || []).map((match) => match.category_id).filter(Boolean))];
 
-  const [opponentsResponse, categoriesResponse] = await Promise.all([
-    opponentIds.length
-      ? supabase.from("players").select("id,name").in("id", opponentIds)
-      : Promise.resolve({ data: [], error: null }),
-    categoryIds.length
-      ? supabase.from("categories").select("id,name").in("id", categoryIds)
-      : Promise.resolve({ data: [], error: null })
-  ]);
+  const playersResponse = playerIds.length
+    ? await supabase.from("players").select("id,name,category_id").in("id", playerIds)
+    : { data: [], error: null };
 
-  if (opponentsResponse.error) {
-    throw opponentsResponse.error;
+  if (playersResponse.error) {
+    throw playersResponse.error;
   }
+
+  const playerRows = playersResponse.data || [];
+  const playerCategoryIds = [...new Set(playerRows.map((row) => row.category_id).filter(Boolean))];
+  const categoryIds = [...new Set([...matchCategoryIds, ...playerCategoryIds])];
+  const categoriesResponse = categoryIds.length
+    ? await supabase.from("categories").select("id,name").in("id", categoryIds)
+    : { data: [], error: null };
+
   if (categoriesResponse.error) {
     throw categoriesResponse.error;
   }
 
-  const opponentMap = new Map((opponentsResponse.data || []).map((row) => [String(row.id), row.name]));
+  const playerMap = new Map(playerRows.map((row) => [String(row.id), row]));
   const categoryMap = new Map((categoriesResponse.data || []).map((row) => [String(row.id), row.name]));
   const summary = {
     total_matches: (matches || []).length,
@@ -493,12 +498,32 @@ async function buildAcademyMatchesSection(player, academyId) {
       summary.losses += 1;
     }
 
+    const player1 = playerMap.get(String(match.player1_id)) || null;
+    const player2 = playerMap.get(String(match.player2_id)) || null;
+    const player1CategoryName =
+      categoryMap.get(String(player1?.category_id || match.category_id || "")) ||
+      categoryMap.get(String(match.category_id || "")) ||
+      null;
+    const player2CategoryName =
+      categoryMap.get(String(player2?.category_id || match.category_id || "")) ||
+      categoryMap.get(String(match.category_id || "")) ||
+      null;
+
     return {
       id: match.id,
       match_date: match.match_date,
       category_name: categoryMap.get(String(match.category_id)) || player.category_name || null,
-      opponent_name: opponentMap.get(String(isPlayerOne ? match.player2_id : match.player1_id)) || null,
+      opponent_name:
+        playerMap.get(String(isPlayerOne ? match.player2_id : match.player1_id))?.name || null,
       score_raw: isPlayerOne ? match.score_raw : reverseScoreRaw(match.score_raw),
+      display_score:
+        String(match.result_type || "normal").toLowerCase() === "normal"
+          ? (isPlayerOne ? match.score_raw : reverseScoreRaw(match.score_raw)) || "-"
+          : String(match.result_type || "normal").toUpperCase(),
+      player1_name: player1?.name || null,
+      player1_category_name: player1CategoryName,
+      player2_name: player2?.name || null,
+      player2_category_name: player2CategoryName,
       result_type: match.result_type || "normal",
       result_label: didWin ? "Won" : "Lost"
     };
@@ -506,7 +531,8 @@ async function buildAcademyMatchesSection(player, academyId) {
 
   return {
     summary,
-    recent_matches: recentMatches
+    recent_matches: recentMatches,
+    match_log: recentMatches
   };
 }
 

@@ -90,7 +90,7 @@ function resolveScopedAcademyId(value, req, { required = true } = {}) {
 
 function getMonthName(month, year) {
   return new Date(year, month - 1, 1).toLocaleDateString("en-IN", {
-    month: "long",
+    month: "short",
     year: "numeric"
   });
 }
@@ -128,6 +128,11 @@ function calculateInvoiceStatus({ totalAmount, paidAmount, currentStatus }) {
   }
 
   return "partial";
+}
+
+function canOverrideInvoices(req) {
+  const roleName = String(getRoleName(req) || "").toLowerCase();
+  return roleName === "super_admin" || roleName === "academy_admin" || roleName === "head_coach";
 }
 
 async function enrichInvoices(invoices) {
@@ -380,7 +385,11 @@ router.post("/generate-monthly", auth, async (req, res) => {
           dueDay: plan?.due_day || 5,
           graceDays: plan?.grace_days || 0
         }),
+        calculated_amount: amount,
         amount,
+        override_amount: null,
+        override_reason: null,
+        override_updated_by: null,
         discount_amount: 0,
         late_fee_amount: 0,
         total_amount: amount,
@@ -438,8 +447,17 @@ router.patch("/:id", auth, async (req, res) => {
     const discountAmount = normalizeAmount(req.body.discount_amount, "discount_amount", { required: false });
     const lateFeeAmount = normalizeAmount(req.body.late_fee_amount, "late_fee_amount", { required: false });
     const requestedStatus = normalizeText(req.body.status);
+    const overrideAmount = normalizeAmount(req.body.override_amount, "override_amount", { required: false });
+    const overrideReason = normalizeText(req.body.override_reason);
 
-    const nextAmount = Number(existingInvoice.amount || 0);
+    if (overrideAmount !== null && !canOverrideInvoices(req)) {
+      return res.status(403).json({ error: "You do not have permission to override invoice amounts" });
+    }
+
+    const baseCalculatedAmount = Number(
+      existingInvoice.calculated_amount ?? existingInvoice.amount ?? 0
+    );
+    const nextAmount = overrideAmount !== null ? overrideAmount : Number(existingInvoice.amount || 0);
     const nextDiscount = discountAmount ?? Number(existingInvoice.discount_amount || 0);
     const nextLateFee = lateFeeAmount ?? Number(existingInvoice.late_fee_amount || 0);
     const nextTotal = Number(Math.max(nextAmount - nextDiscount + nextLateFee, 0).toFixed(2));
@@ -465,8 +483,22 @@ router.patch("/:id", auth, async (req, res) => {
     const { data, error } = await supabase
       .from("invoices")
       .update({
+        calculated_amount: baseCalculatedAmount,
         discount_amount: nextDiscount,
         late_fee_amount: nextLateFee,
+        amount: nextAmount,
+        override_amount:
+          overrideAmount !== null
+            ? overrideAmount
+            : existingInvoice.override_amount ?? null,
+        override_reason:
+          overrideAmount !== null
+            ? overrideReason
+            : existingInvoice.override_reason ?? null,
+        override_updated_by:
+          overrideAmount !== null
+            ? normalizeInteger(req.user?.id, "user_id", { required: false })
+            : existingInvoice.override_updated_by ?? null,
         total_amount: nextTotal,
         status: nextStatus,
         notes: notes ?? existingInvoice.notes,

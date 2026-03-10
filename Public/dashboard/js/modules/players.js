@@ -1,4 +1,5 @@
 import { api } from "../services/api.js";
+import { bindDebouncedSearch } from "../utils/search.js";
 
 const PLAYER_PHOTO_MAX_BYTES = 5 * 1024 * 1024;
 const ALLOWED_PHOTO_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
@@ -647,7 +648,22 @@ function renderPlayerTable() {
               (player) => `
                 <tr>
                   <td>
-                    <strong>${escapeHtml(player.name)}</strong>
+                    <div class="player-name-wrap">
+                      <strong class="player-name" title="Hover to preview photo">${escapeHtml(
+                        player.name
+                      )}</strong>
+                      ${
+                        hasText(player.photo_url)
+                          ? `
+                            <div class="player-photo-hover" aria-hidden="true">
+                              <img src="${escapeHtml(player.photo_url)}" alt="${escapeHtml(
+                                player.name
+                              )} photo" />
+                            </div>
+                          `
+                          : ""
+                      }
+                    </div>
                     <div class="player-table-meta">
                       <span>${escapeHtml(player.gender || "-")}</span>
                       <span>${escapeHtml(player.email || "No email")}</span>
@@ -1130,8 +1146,8 @@ function bindEvents() {
       renderPlayersPage();
     });
 
-  document.getElementById("playerSearch")?.addEventListener("input", (event) => {
-    state.filters.search = event.target.value;
+  bindDebouncedSearch(document.getElementById("playerSearch"), (value) => {
+    state.filters.search = value;
     renderPlayersPage();
   });
 

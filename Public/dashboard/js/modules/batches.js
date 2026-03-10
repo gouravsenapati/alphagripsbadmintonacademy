@@ -1,4 +1,5 @@
 import { api } from "../services/api.js";
+import { bindDebouncedSearch } from "../utils/search.js";
 
 const state = {
   batches: [],
@@ -320,8 +321,8 @@ function bindEvents() {
       renderPage();
     });
 
-  document.getElementById("batchSearch")?.addEventListener("input", (event) => {
-    state.filters.search = event.target.value;
+  bindDebouncedSearch(document.getElementById("batchSearch"), (value) => {
+    state.filters.search = value;
     renderPage();
   });
 

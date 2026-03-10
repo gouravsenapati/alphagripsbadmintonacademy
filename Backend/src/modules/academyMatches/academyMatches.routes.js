@@ -239,6 +239,29 @@ async function listResults(categoryId, matchDate, req) {
   return data || [];
 }
 
+async function listAllResultsForCategory(categoryId, req) {
+  if (!categoryId) {
+    return [];
+  }
+
+  let query = supabase
+    .from(ACADEMY_MATCH_RESULTS_TABLE)
+    .select("*")
+    .eq("category_id", categoryId)
+    .order("match_date", { ascending: false })
+    .order("player1_id", { ascending: true })
+    .order("player2_id", { ascending: true });
+  query = applyAcademyFilter(query, req);
+
+  const { data, error } = await query;
+
+  if (error) {
+    throw error;
+  }
+
+  return data || [];
+}
+
 function parseScoreRaw(scoreRaw) {
   const normalized = normalizeText(scoreRaw);
 
@@ -440,6 +463,90 @@ router.get("/", auth, async (req, res) => {
       available_dates: availableDates,
       players,
       results,
+      summary
+    });
+  } catch (error) {
+    handleMatchMatrixError(error, res);
+  }
+});
+
+router.get("/player-log", auth, async (req, res) => {
+  try {
+    const categories = await listScopedCategories(req);
+    const selectedCategoryId =
+      normalizeInteger(req.query.category_id, "category_id") ||
+      normalizeInteger(categories[0]?.id, "category_id");
+
+    const players = await listScopedPlayersByCategory(selectedCategoryId, req);
+    const selectedPlayerId =
+      normalizeInteger(req.query.player_id, "player_id") ||
+      normalizeInteger(players[0]?.id, "player_id");
+
+    const allResults = await listAllResultsForCategory(selectedCategoryId, req);
+    const filteredResults = selectedPlayerId
+      ? allResults.filter(
+          (result) =>
+            Number(result.player1_id) === selectedPlayerId ||
+            Number(result.player2_id) === selectedPlayerId
+        )
+      : [];
+
+    const playerIds = [...new Set(
+      filteredResults.flatMap((result) => [result.player1_id, result.player2_id]).filter(Boolean)
+    )];
+    const scopedPlayers = await listScopedPlayersByIds(playerIds, req);
+    const playerMap = new Map(
+      scopedPlayers.map((player) => [String(player.id), player])
+    );
+    const selectedCategoryName =
+      categories.find((category) => String(category.id) === String(selectedCategoryId || ""))?.name ||
+      null;
+
+    const matchLog = filteredResults.map((result) => {
+      const player1 = playerMap.get(String(result.player1_id));
+      const player2 = playerMap.get(String(result.player2_id));
+      const selectedIsPlayer1 = Number(result.player1_id) === Number(selectedPlayerId);
+      const resultType = String(result.result_type || "normal").toLowerCase();
+      const isWin = Number(result.winner_id) === Number(selectedPlayerId);
+
+      let displayScore = "-";
+      if (resultType === "normal") {
+        displayScore = selectedIsPlayer1
+          ? result.score_raw || "-"
+          : reverseScoreRaw(result.score_raw) || "-";
+      } else if (resultType === "walkover") {
+        displayScore = `WO ${isWin ? "✓" : "✕"}`;
+      } else if (resultType === "ab") {
+        displayScore = `AB ${isWin ? "✓" : "✕"}`;
+      }
+
+      return {
+        id: result.id,
+        match_date: result.match_date,
+        player1_name: player1?.name || "-",
+        player1_category_name: selectedCategoryName || "-",
+        player2_name: player2?.name || "-",
+        player2_category_name: selectedCategoryName || "-",
+        score_raw: result.score_raw,
+        display_score: displayScore,
+        result_type: resultType,
+        result_label: isWin ? "Won" : "Lost",
+        winner_id: result.winner_id
+      };
+    });
+
+    const summary = {
+      total_matches: matchLog.length,
+      wins: matchLog.filter((match) => String(match.result_label).toLowerCase() === "won").length,
+      losses: matchLog.filter((match) => String(match.result_label).toLowerCase() === "lost").length
+    };
+
+    res.json({
+      categories,
+      selected_category_id: selectedCategoryId,
+      players,
+      selected_player_id: selectedPlayerId,
+      match_log: matchLog,
       summary
     });
   } catch (error) {

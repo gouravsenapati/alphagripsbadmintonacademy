@@ -1,4 +1,5 @@
 import "./layout.js";
+import { renderAcademies } from "./modules/academies.js";
 import { renderPlayers } from "./modules/players.js";
 import { renderUsers } from "./modules/users.js";
 import { renderCategories } from "./modules/categories.js";
@@ -7,6 +8,7 @@ import { renderPlayerBatches } from "./modules/playerBatches.js";
 import { renderAttendance } from "./modules/attendance.js";
 import { renderFitness } from "./modules/fitness.js";
 import { renderMatchMatrix } from "./modules/matchMatrix.js";
+import { renderPlayerMatchLog } from "./modules/playerMatchLog.js";
 import { renderFeePlans } from "./modules/feePlans.js";
 import { renderInvoices } from "./modules/invoices.js";
 import { renderPayments } from "./modules/payments.js";
@@ -17,6 +19,7 @@ const USER_MANAGER_ROLES = new Set(["super_admin", "head_coach", "academy_admin"
 const routes = {
   dashboard: renderPlayers,
   players: renderPlayers,
+  academies: renderAcademies,
   users: renderUsers,
   categories: renderCategories,
   batches: renderBatches,
@@ -24,6 +27,7 @@ const routes = {
   attendance: renderAttendance,
   fitness: renderFitness,
   "match-matrix": renderMatchMatrix,
+  "player-match-log": renderPlayerMatchLog,
   "fee-plans": renderFeePlans,
   invoices: renderInvoices,
   payments: renderPayments,

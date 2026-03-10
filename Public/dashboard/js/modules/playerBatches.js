@@ -1,4 +1,5 @@
 import { api } from "../services/api.js";
+import { bindDebouncedSearch } from "../utils/search.js";
 
 const state = {
   assignments: [],
@@ -457,8 +458,8 @@ function bindEvents() {
       renderPage();
     });
 
-  document.getElementById("assignmentSearch")?.addEventListener("input", (event) => {
-    state.filters.search = event.target.value;
+  bindDebouncedSearch(document.getElementById("assignmentSearch"), (value) => {
+    state.filters.search = value;
     renderPage();
   });
 
