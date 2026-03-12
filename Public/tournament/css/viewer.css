@@ -22,6 +22,7 @@ body {
   min-height: 100vh;
   font-family: var(--font-ui);
   color: var(--ink);
+  font-size: 15px;
   background:
     radial-gradient(circle at top left, rgba(38, 56, 110, 0.16), transparent 26%),
     radial-gradient(circle at top right, rgba(241, 135, 22, 0.14), transparent 20%),
@@ -40,9 +41,9 @@ button {
 }
 
 .viewer-shell {
-  width: min(1360px, calc(100vw - 28px));
+  width: min(1280px, calc(100vw - 24px));
   margin: 0 auto;
-  padding: 24px 0 40px;
+  padding: 18px 0 32px;
 }
 
 .viewer-kicker {
@@ -64,15 +65,15 @@ button {
 
 .viewer-hero,
 .viewer-panel {
-  padding: 22px;
+  padding: 18px;
 }
 
 .viewer-hero {
   display: flex;
   justify-content: space-between;
-  gap: 18px;
+  gap: 14px;
   align-items: flex-start;
-  margin-bottom: 18px;
+  margin-bottom: 16px;
 }
 
 .viewer-hero h1,
@@ -122,7 +123,7 @@ button {
 }
 
 .viewer-stat-card {
-  padding: 18px;
+  padding: 16px;
 }
 
 .viewer-stat-card span {
@@ -136,7 +137,7 @@ button {
 .viewer-stat-card strong {
   display: block;
   margin-top: 8px;
-  font-size: 2rem;
+  font-size: 1.75rem;
 }
 
 .viewer-toolbar {
@@ -150,7 +151,7 @@ button {
 }
 
 .viewer-chip {
-  padding: 10px 16px;
+  padding: 8px 14px;
   border-radius: 999px;
   background: rgba(38, 56, 110, 0.08);
   color: var(--brand-dark);
@@ -228,7 +229,7 @@ button {
 .viewer-match-card,
 .viewer-board-card,
 .viewer-result-card {
-  padding: 16px;
+  padding: 14px;
   border-radius: 18px;
   background: rgba(246, 239, 230, 0.72);
   border: 1px solid rgba(38, 56, 110, 0.08);
@@ -273,7 +274,7 @@ button {
 
 .viewer-bracket-scroll {
   overflow: auto;
-  padding: 16px 16px 18px;
+  padding: 14px 14px 16px;
 }
 
 .viewer-bracket-svg {
@@ -289,13 +290,13 @@ button {
 }
 
 .viewer-draw-number {
-  font-size: 18px;
+  font-size: 17px;
   font-weight: 700;
   fill: var(--ink);
 }
 
 .viewer-draw-name {
-  font-size: 17px;
+  font-size: 16px;
   fill: var(--ink);
 }
 
@@ -403,8 +404,8 @@ button {
 
 @media (max-width: 900px) {
   .viewer-shell {
-    width: calc(100vw - 18px);
-    padding: 16px 0 28px;
+    width: calc(100vw - 14px);
+    padding: 14px 0 24px;
   }
 
   .viewer-hero,

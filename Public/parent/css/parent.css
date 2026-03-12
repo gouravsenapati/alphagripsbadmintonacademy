@@ -15,7 +15,7 @@
 .parent-section-tab {
   border: 1px solid rgba(38, 56, 110, 0.16);
   border-radius: 999px;
-  padding: 11px 18px;
+  padding: 9px 15px;
   background: rgba(255, 255, 255, 0.92);
   color: var(--ink);
   cursor: pointer;
@@ -32,7 +32,7 @@
 .parent-tab {
   border: 1px solid rgba(38, 56, 110, 0.16);
   border-radius: 999px;
-  padding: 10px 16px;
+  padding: 9px 14px;
   background: rgba(255, 255, 255, 0.8);
   color: var(--ink);
   cursor: pointer;
@@ -90,7 +90,7 @@
 }
 
 .summary-strip.compact > div {
-  padding: 14px;
+  padding: 12px;
   border-radius: 16px;
   background: rgba(255, 255, 255, 0.72);
   border: 1px solid rgba(217, 222, 234, 0.9);
@@ -115,7 +115,7 @@
 }
 
 .parent-list-item {
-  padding: 16px;
+  padding: 14px;
   border-radius: 16px;
   background: rgba(255, 255, 255, 0.74);
   border: 1px solid rgba(217, 222, 234, 0.9);
@@ -140,7 +140,7 @@
 }
 
 .invoice-card {
-  padding: 18px;
+  padding: 16px;
   border-radius: 18px;
   background: rgba(255, 255, 255, 0.78);
   border: 1px solid rgba(217, 222, 234, 0.9);
@@ -191,7 +191,7 @@
 .fee-status-card {
   display: grid;
   gap: 14px;
-  padding: 18px;
+  padding: 16px;
   border-radius: 20px;
   border: 1px solid rgba(217, 222, 234, 0.9);
   background: rgba(255, 255, 255, 0.82);
@@ -246,7 +246,7 @@
 }
 
 .parent-empty {
-  padding: 30px 22px;
+  padding: 24px 18px;
   text-align: center;
 }
 
@@ -277,7 +277,7 @@
 }
 
 .parent-match-log-table thead th {
-  padding: 16px 14px;
+  padding: 13px 12px;
   text-align: center;
   background: rgba(231, 240, 230, 0.82);
   border-bottom: 1px solid rgba(196, 210, 199, 0.9);
@@ -285,7 +285,7 @@
 }
 
 .parent-match-log-table tbody td {
-  padding: 16px 14px;
+  padding: 13px 12px;
   text-align: center;
   border-bottom: 1px solid rgba(217, 222, 234, 0.85);
   background: rgba(255, 255, 255, 0.76);
@@ -296,7 +296,7 @@
   align-items: center;
   justify-content: center;
   min-width: 120px;
-  padding: 10px 14px;
+  padding: 8px 12px;
   border-radius: 16px;
   font-weight: 700;
   border: 1px solid rgba(217, 222, 234, 0.95);
