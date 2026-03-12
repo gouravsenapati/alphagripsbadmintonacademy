@@ -37,7 +37,8 @@ const state = {
   loading: false,
   submitting: false,
   notice: null,
-  permissionDenied: false
+  permissionDenied: false,
+  setupRequiredMessage: ""
 };
 
 function readStoredTournamentId() {
@@ -125,6 +126,12 @@ function clearNotice() {
 
 function setNotice(message, tone = "info") {
   state.notice = { message, tone };
+}
+
+function isMissingAssignmentTableMessage(message) {
+  return String(message || "")
+    .toLowerCase()
+    .includes("tournament staff assignment table is missing");
 }
 
 function getEmptyFormValues() {
@@ -276,6 +283,29 @@ function renderLoading() {
         <p class="hero-copy">Loading tournament staff workspace...</p>
       </div>
     </section>
+  `;
+}
+
+function renderSetupRequired() {
+  return `
+    <section class="page-header">
+      <div>
+        <p class="eyebrow">Tournament Staff</p>
+        <h2>Finish tournament staff setup</h2>
+        <p class="hero-copy">
+          This tournament can run normally, but the tournament-only staff workspace needs one database table before referee and court-official accounts can be managed here.
+        </p>
+      </div>
+    </section>
+    ${renderContextPanel()}
+    <div class="empty-panel">
+      <p class="eyebrow">One-time setup</p>
+      <h3>Run the tournament staff assignment SQL once</h3>
+      <p>${escapeHtml(
+        state.setupRequiredMessage ||
+          "Run Backend/sql/20260312_public_tournament_user_assignments.sql in Supabase, then refresh this page."
+      )}</p>
+    </div>
   `;
 }
 
@@ -654,6 +684,12 @@ function renderPage() {
     return;
   }
 
+  if (state.setupRequiredMessage) {
+    app.innerHTML = renderSetupRequired();
+    bindEvents();
+    return;
+  }
+
   app.innerHTML = `
     <section class="page-header">
       <div>
@@ -702,6 +738,7 @@ async function loadTournamentStaffData() {
       current_role: null
     };
     state.users = [];
+    state.setupRequiredMessage = "";
     return;
   }
 
@@ -713,6 +750,7 @@ async function loadTournamentStaffData() {
   state.meta = meta || state.meta;
   state.users = Array.isArray(users) ? users : [];
   state.formValues = getInitializedFormValues(state.formValues);
+  state.setupRequiredMessage = "";
 }
 
 async function refreshWorkspace() {
@@ -725,13 +763,18 @@ async function refreshWorkspace() {
     if (canManageTournamentStaff()) {
       await loadTournamentStaffData();
       state.permissionDenied = false;
+      state.setupRequiredMessage = "";
     } else {
       state.permissionDenied = true;
     }
   } catch (error) {
     if (String(error.message || "").toLowerCase().includes("permission")) {
       state.permissionDenied = true;
+    } else if (isMissingAssignmentTableMessage(error.message)) {
+      state.setupRequiredMessage = error.message;
+      clearNotice();
     } else {
+      state.setupRequiredMessage = "";
       setNotice(error.message || "Failed to load tournament staff", "danger");
     }
   } finally {

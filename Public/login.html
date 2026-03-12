@@ -37,15 +37,15 @@ body {
 .login-shell {
   min-height: 100vh;
   display: grid;
-  grid-template-columns: minmax(320px, 0.95fr) minmax(340px, 420px);
+  grid-template-columns: minmax(320px, 0.92fr) minmax(320px, 390px);
 }
 
 .login-hero {
-  padding: 48px 56px;
+  padding: 36px 42px;
   display: flex;
   flex-direction: column;
   justify-content: center;
-  gap: 22px;
+  gap: 16px;
   color: #ffffff;
 }
 
@@ -59,16 +59,16 @@ body {
 
 .hero-title {
   margin: 0;
-  max-width: 620px;
-  font-size: clamp(30px, 3.3vw, 46px);
-  line-height: 1.08;
+  max-width: 560px;
+  font-size: clamp(27px, 3vw, 38px);
+  line-height: 1.1;
 }
 
 .hero-copy {
   margin: 0;
-  max-width: 500px;
-  font-size: 16px;
-  line-height: 1.6;
+  max-width: 480px;
+  font-size: 15px;
+  line-height: 1.55;
   color: rgba(255, 255, 255, 0.82);
 }
 
@@ -82,13 +82,14 @@ body {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  padding: 10px 14px;
+  padding: 9px 13px;
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.12);
   border: 1px solid rgba(255, 255, 255, 0.18);
   color: #ffffff;
   text-decoration: none;
   font-weight: 600;
+  font-size: 14px;
   transition: 0.2s ease;
 }
 
@@ -98,38 +99,11 @@ body {
   border-color: rgba(242, 138, 27, 0.62);
 }
 
-.hero-note-grid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 16px;
-}
-
-.hero-note {
-  padding: 16px;
-  border-radius: 18px;
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  backdrop-filter: blur(10px);
-}
-
-.hero-note strong {
-  display: block;
-  margin-bottom: 8px;
-  font-size: 14px;
-}
-
-.hero-note span {
-  display: block;
-  font-size: 14px;
-  line-height: 1.55;
-  color: rgba(255, 255, 255, 0.76);
-}
-
 .login-panel {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 28px;
+  padding: 22px;
   background: linear-gradient(180deg, rgba(246, 240, 229, 0.96), rgba(255, 255, 255, 0.96));
 }
 
@@ -139,7 +113,7 @@ body {
   border: 1px solid rgba(29, 44, 99, 0.08);
   border-radius: 24px;
   box-shadow: var(--shadow);
-  padding: 28px 28px 24px;
+  padding: 24px 24px 20px;
 }
 
 .card-top {
@@ -171,30 +145,9 @@ body {
 }
 
 .card h2 {
-  margin: 12px 0 0;
-  font-size: 28px;
+  margin: 10px 0 0;
+  font-size: 26px;
   line-height: 1.15;
-}
-
-.target-card {
-  margin: 0 0 22px;
-  padding: 16px 18px;
-  border-radius: 18px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-}
-
-.target-card strong {
-  display: block;
-  margin-bottom: 6px;
-  font-size: 15px;
-}
-
-.target-card span {
-  display: block;
-  font-size: 14px;
-  line-height: 1.55;
-  color: var(--muted);
 }
 
 .field {
@@ -283,15 +236,11 @@ body {
   }
 
   .login-hero {
-    padding: 34px 24px 16px;
-  }
-
-  .hero-note-grid {
-    grid-template-columns: 1fr;
+    padding: 28px 22px 10px;
   }
 
   .login-panel {
-    padding: 16px 16px 24px;
+    padding: 14px 14px 20px;
   }
 }
 
@@ -326,8 +275,6 @@ body {
     </div>
 
     <div class="portal-pills" id="portalPills"></div>
-
-    <div class="hero-note-grid" id="heroNotes"></div>
   </section>
 
   <section class="login-panel">
@@ -340,11 +287,6 @@ body {
             Use this path for AlphaGrips academy work like players, batches, attendance, fees, and reports.
           </p>
         </div>
-      </div>
-
-      <div class="target-card">
-        <strong id="targetTitle">After login</strong>
-        <span id="targetDescription">You will enter the AlphaGrips academy admin dashboard.</span>
       </div>
 
       <div class="field">
@@ -385,8 +327,6 @@ const PORTALS = {
     cardTitle: "Academy Login",
     cardContext:
       "Best for super admin, academy admin, head coach, coach, and office staff doing normal academy work.",
-    targetTitle: "After login",
-    targetDescription: "You will enter the AlphaGrips academy admin dashboard.",
     button: "Login to Academy"
   },
   tournament: {
@@ -398,8 +338,6 @@ const PORTALS = {
     cardTitle: "Tournament Staff Login",
     cardContext:
       "Best for tournament admin and staff managing events, draws, live scoring, and control desk activity.",
-    targetTitle: "After login",
-    targetDescription: "You will go directly into the tournament console.",
     button: "Login to Tournament Console"
   },
   referee: {
@@ -411,8 +349,6 @@ const PORTALS = {
     cardTitle: "Court Official Login",
     cardContext:
       "Best for referees and court officials who should only see their assigned match flow.",
-    targetTitle: "After login",
-    targetDescription: "You will go directly to the court official console.",
     button: "Login to Court Console"
   }
 };
@@ -467,34 +403,6 @@ function renderPortalPills() {
     .join("");
 }
 
-function renderHeroNotes() {
-  const notes = [
-    {
-      title: "Academy Login",
-      copy: "Players, staff, attendance, fees, rankings, and daily operations."
-    },
-    {
-      title: "Tournament Login",
-      copy: "Events, registrations, draws, courts, and live scoring."
-    },
-    {
-      title: "Court Official Login",
-      copy: "Claim a court, start the match, score it, and finish it."
-    }
-  ];
-
-  document.getElementById("heroNotes").innerHTML = notes
-    .map(
-      (note) => `
-        <article class="hero-note">
-          <strong>${note.title}</strong>
-          <span>${note.copy}</span>
-        </article>
-      `
-    )
-    .join("");
-}
-
 function renderQuickLinks() {
   const links = [
     { label: "Back to Home", href: "/Public/index.html" },
@@ -518,14 +426,11 @@ function renderPortalContext() {
   document.getElementById("portalBadge").textContent = activeConfig.badge;
   document.getElementById("cardTitle").textContent = activeConfig.cardTitle;
   document.getElementById("cardContext").textContent = activeConfig.cardContext;
-  document.getElementById("targetTitle").textContent = activeConfig.targetTitle;
-  document.getElementById("targetDescription").textContent = activeConfig.targetDescription;
   document.getElementById("loginButton").textContent = activeConfig.button;
 }
 
 renderPortalContext();
 renderPortalPills();
-renderHeroNotes();
 renderQuickLinks();
 
 window.login = async function login() {

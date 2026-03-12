@@ -47,10 +47,13 @@ function getStoredRole() {
 }
 
 function isParentUser() {
-  return (
-    getStoredRole().startsWith("parent") ||
-    String(localStorage.getItem("role_id") || "").trim() === "4"
-  );
+  const access = window.AGPortalAccess;
+
+  if (!access) {
+    return getStoredRole().startsWith("parent");
+  }
+
+  return access.isParentRole(getStoredRole(), localStorage.getItem("role_id"));
 }
 
 function isRefereeOnlyUser() {
