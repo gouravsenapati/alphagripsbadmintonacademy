@@ -743,6 +743,7 @@ export async function listPublicMatches({
 }
 
 export {
+  approveRegistrationToParticipant,
   createRegistrationPaymentOrder,
   verifyRegistrationPayment,
   createTournamentRegistration,

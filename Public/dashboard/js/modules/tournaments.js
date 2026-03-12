@@ -59,10 +59,10 @@ const PAGE_META = {
       "Start matches, enter set-by-set scores, and finalize results with automatic winner propagation."
   },
   brackets: {
-    title: "Tournament Brackets",
-    eyebrow: "Bracket View",
+    title: "Tournament Draws",
+    eyebrow: "Draw View",
     description:
-      "Visualize every event round by round, see progression through the knockout tree, and spot winners at a glance."
+      "Visualize every event round by round, see progression through the knockout draw, and spot winners at a glance."
   },
   courts: {
     title: "Court Monitor",
@@ -105,6 +105,53 @@ function formatDate(value) {
 
 function hasText(value) {
   return value !== null && value !== undefined && String(value).trim() !== "";
+}
+
+function getRegistrationPaymentReviewBadge(registration) {
+  const paymentMethod = String(registration?.payment_method || "").toLowerCase();
+  const paymentStatus = String(registration?.payment_status || "").toLowerCase();
+
+  if (paymentStatus === "rejected") {
+    return {
+      label: "Payment rejected",
+      tone: "danger"
+    };
+  }
+
+  if (paymentMethod === "online") {
+    return {
+      label:
+        paymentStatus === "paid"
+          ? "Online auto-confirmed"
+          : "Online payment pending",
+      tone: paymentStatus === "paid" ? "success" : "warning"
+    };
+  }
+
+  if (paymentMethod === "upi") {
+    return {
+      label:
+        paymentStatus === "paid"
+          ? "UPI manually verified"
+          : "UPI manual review pending",
+      tone: paymentStatus === "paid" ? "success" : "warning"
+    };
+  }
+
+  if (paymentMethod === "bank_transfer") {
+    return {
+      label:
+        paymentStatus === "paid"
+          ? "Bank transfer verified"
+          : "Bank transfer review pending",
+      tone: paymentStatus === "paid" ? "success" : "warning"
+    };
+  }
+
+  return {
+    label: "Payment review pending",
+    tone: paymentStatus === "paid" ? "success" : "neutral"
+  };
 }
 
   function getPlayerName(playerId) {
@@ -327,6 +374,14 @@ function setActivePage(page) {
 
 function getPageMeta() {
   return PAGE_META[state.page] || PAGE_META.overview;
+}
+
+function shouldShowCreateTournamentButton() {
+  if (!state.tournaments.length || !state.selectedTournamentId) {
+    return true;
+  }
+
+  return ["overview", "setup"].includes(state.page);
 }
 
 function getSelectedEvents() {
@@ -926,7 +981,7 @@ function renderConsoleNav() {
   const links = [
     { route: "tournaments", key: "overview", label: "Overview" },
     { route: "tournament-setup", key: "setup", label: "Setup" },
-    { route: "tournament-brackets", key: "brackets", label: "Brackets" },
+    { route: "tournament-brackets", key: "brackets", label: "Draws" },
     { route: "tournament-operations", key: "operations", label: "Operations" },
     { route: "tournament-courts", key: "courts", label: "Courts" },
     { route: "tournament-scoring", key: "scoring", label: "Live Scoring" },
@@ -1308,8 +1363,8 @@ function renderBracketsPage() {
     <section class="panel">
       <div class="panel-head">
         <div>
-          <p class="eyebrow">Bracket View</p>
-          <h3>Event progression</h3>
+          <p class="eyebrow">Draw View</p>
+          <h3>Event draws</h3>
         </div>
       </div>
       ${
@@ -1356,7 +1411,7 @@ function renderBracketsPage() {
                               </div>
                               ${renderChampionLane(event.id)}
                             `
-                          : `<div class="empty-panel compact"><h3>No draw generated</h3><p>Generate the draw to visualize the bracket.</p></div>`
+                              : `<div class="empty-panel compact"><h3>No draw generated</h3><p>Generate the draw to visualize the event draw.</p></div>`
                       }
                     </div>
                   </section>
@@ -1654,9 +1709,15 @@ function renderPage() {
         <h2>${escapeHtml(pageMeta.title)}</h2>
         <p class="hero-copy">${escapeHtml(pageMeta.description)}</p>
       </div>
-      <div class="hero-actions">
-        <button class="btn btn-primary" data-action="create-tournament">New Tournament</button>
-      </div>
+      ${
+        shouldShowCreateTournamentButton()
+          ? `
+            <div class="hero-actions">
+              <button class="btn btn-primary" data-action="create-tournament">New Tournament</button>
+            </div>
+          `
+          : ""
+      }
     </section>
 
     ${renderNotice()}
@@ -2585,7 +2646,10 @@ async function openRegistrationsModal(eventId) {
             registrations.length
               ? registrations
                   .map(
-                    (registration) => `
+                    (registration) => {
+                      const paymentReview = getRegistrationPaymentReviewBadge(registration);
+
+                      return `
                       <article class="registration-review-card">
                         <div class="registration-review-header">
                           <div>
@@ -2593,10 +2657,15 @@ async function openRegistrationsModal(eventId) {
                             <p class="table-subtitle">${escapeHtml(registration.gender || "-")} • ${escapeHtml(
                               String(registration.age || "-")
                             )}</p>
+                            <div class="registration-review-badges">
+                              <span class="status-pill status-${statusTone(registration.payment_status)}">${escapeHtml(
+                                registration.payment_status || "-"
+                              )}</span>
+                              <span class="result-tag tone-${escapeHtml(paymentReview.tone)}">${escapeHtml(
+                                paymentReview.label
+                              )}</span>
+                            </div>
                           </div>
-                          <span class="status-pill status-${statusTone(registration.payment_status)}">${escapeHtml(
-                            registration.payment_status || "-"
-                          )}</span>
                         </div>
 
                         <div class="registration-review-grid">
@@ -2626,6 +2695,14 @@ async function openRegistrationsModal(eventId) {
                               <strong>${escapeHtml(formatDate(registration.created_at))}</strong>
                             </div>
                             <div class="registration-review-meta-item">
+                              <span>Participant</span>
+                              <strong>${
+                                registration.participant?.display_name
+                                  ? escapeHtml(registration.participant.display_name)
+                                  : "Not added yet"
+                              }</strong>
+                            </div>
+                            <div class="registration-review-meta-item">
                               <span>Proof</span>
                               ${
                                 hasText(registration.payment_proof_url)
@@ -2641,6 +2718,8 @@ async function openRegistrationsModal(eventId) {
                             registration.id
                           )}" data-entry-id="${escapeHtml(
                             registration.event?.entry_row_id || ""
+                          )}" data-participant-id="${escapeHtml(
+                            registration.participant?.id || ""
                           )}">
                             <div class="registration-review-controls">
                               <label>
@@ -2680,11 +2759,30 @@ async function openRegistrationsModal(eventId) {
                             </label>
                             <div class="registration-review-actions">
                               <button class="btn btn-primary btn-sm" type="submit">Save Review</button>
+                              <button
+                                class="btn btn-secondary btn-sm"
+                                type="button"
+                                data-registration-action="approve-participant"
+                                ${
+                                  registration.participant?.id
+                                    ? "disabled"
+                                    : registration.payment_status === "paid"
+                                      ? ""
+                                      : "disabled"
+                                }
+                              >
+                                ${
+                                  registration.participant?.id
+                                    ? "Participant Added"
+                                    : "Approve & Add"
+                                }
+                              </button>
                             </div>
                           </form>
                         </div>
                       </article>
-                    `
+                    `;
+                    }
                   )
                   .join("")
               : `<div class="empty-panel compact">No registrations submitted yet.</div>`
@@ -2695,6 +2793,29 @@ async function openRegistrationsModal(eventId) {
   });
 
   modal.querySelectorAll(".registration-review-form").forEach((form) => {
+    const paymentSelect = form.querySelector('select[name="payment_status"]');
+    const approveButton = form.querySelector('[data-registration-action="approve-participant"]');
+    const participantId = form.dataset.participantId;
+
+    const syncApproveButtonState = () => {
+      if (!approveButton) {
+        return;
+      }
+
+      if (participantId) {
+        approveButton.disabled = true;
+        approveButton.textContent = "Participant Added";
+        return;
+      }
+
+      const isPaid = paymentSelect?.value === "paid";
+      approveButton.disabled = !isPaid;
+      approveButton.textContent = "Approve & Add";
+    };
+
+    paymentSelect?.addEventListener("change", syncApproveButtonState);
+    syncApproveButtonState();
+
     form.onsubmit = async (submitEvent) => {
       submitEvent.preventDefault();
 
@@ -2725,6 +2846,28 @@ async function openRegistrationsModal(eventId) {
         alert(error.message);
       }
     };
+
+    approveButton?.addEventListener("click", async () => {
+      const formElement = form;
+      const registrationId = formElement.dataset.registrationId;
+      const formData = new FormData(formElement);
+
+      try {
+        await tournamentApi.approveRegistrationParticipant(
+          state.selectedTournamentId,
+          registrationId,
+          {
+            payment_status: formData.get("payment_status"),
+            notes: formData.get("notes")
+          }
+        );
+        setNotice("Registration approved and added to participants", "success");
+        await refreshSelectedTournament();
+        await openRegistrationsModal(eventId);
+      } catch (error) {
+        alert(error.message);
+      }
+    });
   });
 }
 

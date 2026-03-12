@@ -1548,6 +1548,30 @@ tr:hover td {
   font-size: 0.9rem;
 }
 
+.result-tag.tone-success {
+  background: rgba(30, 111, 67, 0.12);
+  color: #16613c;
+  border-color: rgba(30, 111, 67, 0.18);
+}
+
+.result-tag.tone-warning {
+  background: rgba(214, 135, 31, 0.14);
+  color: #92580f;
+  border-color: rgba(214, 135, 31, 0.18);
+}
+
+.result-tag.tone-danger {
+  background: rgba(189, 72, 52, 0.12);
+  color: #9f3826;
+  border-color: rgba(189, 72, 52, 0.18);
+}
+
+.result-tag.tone-neutral {
+  background: rgba(38, 56, 110, 0.08);
+  color: var(--brand-dark);
+  border-color: rgba(38, 56, 110, 0.14);
+}
+
 .modal {
   position: fixed;
   inset: 0;
@@ -1636,6 +1660,13 @@ tr:hover td {
   font-size: 1.18rem;
 }
 
+.registration-review-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 10px;
+}
+
 .registration-review-grid {
   display: grid;
   gap: 20px;
@@ -1705,6 +1736,8 @@ tr:hover td {
 .registration-review-actions {
   display: flex;
   justify-content: flex-start;
+  flex-wrap: wrap;
+  gap: 10px;
   padding-top: 4px;
 }
 

@@ -18,6 +18,26 @@ export const tournamentApi = {
     return api.get("/tournaments");
   },
 
+  getTournamentStaffMeta(tournamentId) {
+    return api.get(`/tournaments/staff/meta${buildQuery({ tournamentId })}`);
+  },
+
+  listTournamentStaff(tournamentId) {
+    return api.get(`/tournaments/staff${buildQuery({ tournamentId })}`);
+  },
+
+  createTournamentStaff(payload) {
+    return api.post("/tournaments/staff", payload);
+  },
+
+  updateTournamentStaff(userId, payload) {
+    return api.patch(`/tournaments/staff/${userId}`, payload);
+  },
+
+  deleteTournamentStaff(userId, tournamentId) {
+    return api.delete(`/tournaments/staff/${userId}${buildQuery({ tournamentId })}`);
+  },
+
   listPlayers() {
     return api.get("/players");
   },
@@ -60,6 +80,13 @@ export const tournamentApi = {
 
   updateRegistration(tournamentId, registrationId, payload) {
     return api.patch(`/tournaments/${tournamentId}/registrations/${registrationId}`, payload);
+  },
+
+  approveRegistrationParticipant(tournamentId, registrationId, payload) {
+    return api.post(
+      `/tournaments/${tournamentId}/registrations/${registrationId}/approve-participant`,
+      payload
+    );
   },
 
   createCourt(tournamentId, payload) {

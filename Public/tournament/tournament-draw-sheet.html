@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AlphaGrips Public Draw Sheet</title>
+    <script>
+      (function redirectToCurrentDrawSheet() {
+        const query = window.location.search || "";
+        const hash = window.location.hash || "";
+        window.location.replace(`/Public/tournament/draw-sheet.html${query}${hash}`);
+      })();
+    </script>
+  </head>
+  <body></body>
+</html>

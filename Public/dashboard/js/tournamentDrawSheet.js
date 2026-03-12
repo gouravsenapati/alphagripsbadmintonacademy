@@ -393,7 +393,7 @@ function renderScoreBadge(x, centerY, label, options = {}) {
         }
       </div>
       <div class="sheet-toolbar-group">
-        <a class="sheet-btn" href="/Public/tournament/index.html#tournament-brackets">Back to Brackets</a>
+        <a class="sheet-btn" href="/Public/tournament/index.html#tournament-brackets">Back to Draws</a>
         <button class="sheet-btn primary" id="printDrawSheet" type="button">Print Sheet</button>
       </div>
     </section>

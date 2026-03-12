@@ -287,6 +287,39 @@ function parseScoreRaw(scoreRaw) {
     .filter(Boolean);
 }
 
+function buildStreakMap(results) {
+  const streaks = new Map();
+  const sorted = [...results]
+    .filter((result) => String(result.result_type || "normal").toLowerCase() === "normal")
+    .sort((a, b) => {
+      if (a.match_date === b.match_date) {
+        return Number(b.id) - Number(a.id);
+      }
+      return String(b.match_date || "").localeCompare(String(a.match_date || ""));
+    });
+
+  for (const result of sorted) {
+    const player1Id = String(result.player1_id);
+    const player2Id = String(result.player2_id);
+    const winnerId = String(result.winner_id || "");
+
+    if (!streaks.has(player1Id)) streaks.set(player1Id, []);
+    if (!streaks.has(player2Id)) streaks.set(player2Id, []);
+
+    const player1Streak = streaks.get(player1Id);
+    const player2Streak = streaks.get(player2Id);
+
+    if (player1Streak.length < 5) {
+      player1Streak.push(winnerId === player1Id ? "W" : "L");
+    }
+    if (player2Streak.length < 5) {
+      player2Streak.push(winnerId === player2Id ? "W" : "L");
+    }
+  }
+
+  return streaks;
+}
+
 function buildStandingsSummary({ categories, selectedCategoryId, players, results }) {
   const expectedMatches = players.length > 1 ? (players.length * (players.length - 1)) / 2 : 0;
   const completedMatches = results.length;
@@ -548,6 +581,69 @@ router.get("/player-log", auth, async (req, res) => {
       selected_player_id: selectedPlayerId,
       match_log: matchLog,
       summary
+    });
+  } catch (error) {
+    handleMatchMatrixError(error, res);
+  }
+});
+
+router.get("/standings", auth, async (req, res) => {
+  try {
+    const categories = await listScopedCategories(req);
+    const selectedCategoryId = normalizeInteger(req.query.category_id, "category_id");
+    const selectedMatchDate = normalizeDate(req.query.match_date, "match_date", {
+      required: false
+    });
+    const selectedCategories = selectedCategoryId
+      ? categories.filter((category) => Number(category.id) === selectedCategoryId)
+      : categories;
+
+    const rows = [];
+    let availableDates = [];
+
+    for (const category of selectedCategories) {
+      const categoryId = Number(category.id);
+      const players = await listScopedPlayersByCategory(categoryId, req);
+      const results = selectedMatchDate
+        ? await listResults(categoryId, selectedMatchDate, req)
+        : await listAllResultsForCategory(categoryId, req);
+      const normalResults = results.filter(
+        (result) => String(result.result_type || "normal").toLowerCase() === "normal"
+      );
+      const summary = buildStandingsSummary({
+        categories,
+        selectedCategoryId: categoryId,
+        players,
+        results: normalResults
+      });
+      const streakMap = buildStreakMap(normalResults);
+
+      summary.standings
+        .filter((standing) => standing.matches_played > 0)
+        .forEach((standing) => {
+        const streak = (streakMap.get(String(standing.player_id)) || []).join(" ");
+        rows.push({
+          player_id: standing.player_id,
+          player_name: standing.player_name,
+          category_id: categoryId,
+          category_name: category.name,
+          wins: standing.wins,
+          losses: standing.losses,
+          total_matches: standing.matches_played,
+          streak
+        });
+      });
+
+      if (selectedCategoryId && String(category.id) === String(selectedCategoryId || "")) {
+        availableDates = await listAvailableDates(categoryId, req);
+      }
+    }
+
+    res.json({
+      categories,
+      rows,
+      available_dates: availableDates,
+      selected_match_date: selectedMatchDate || null
     });
   } catch (error) {
     handleMatchMatrixError(error, res);

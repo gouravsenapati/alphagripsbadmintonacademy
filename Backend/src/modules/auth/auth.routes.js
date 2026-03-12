@@ -25,7 +25,12 @@ async function getRoleName(roleId) {
 
 router.post("/login", async (req, res) => {
 
-  const { email, password } = req.body;
+  const email = String(req.body?.email || "").trim().toLowerCase();
+  const password = String(req.body?.password || "");
+
+  if (!email || !password) {
+    return res.status(401).json({ error: "Invalid credentials" });
+  }
 
   const { data: user, error } = await supabase
     .from("app_users")

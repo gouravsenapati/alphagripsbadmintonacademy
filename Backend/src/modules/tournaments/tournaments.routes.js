@@ -1,17 +1,21 @@
 import express from "express";
 import { auth } from "../../middleware/auth.middleware.js";
 import {
+  approveRegistrationParticipantHandler,
   assignCourtRefereeHandler,
   assignCourtHandler,
   claimRefereeCourtHandler,
   completeMatchHandler,
   completeRefereeMatchHandler,
+  createTournamentStaffHandler,
   createCourtHandler,
   createEventHandler,
   updateEventHandler,
   createTournamentHandler,
+  deleteTournamentStaffHandler,
   updateTournamentHandler,
   deleteTournamentHandler,
+  getTournamentStaffMetaHandler,
   generateDrawHandler,
   getRefereeDashboardHandler,
   getRefereeMatchSetsHandler,
@@ -23,6 +27,7 @@ import {
   listParticipantsHandler,
   listRefereesHandler,
   listReadyMatchesHandler,
+  listTournamentStaffHandler,
   listTournamentsHandler,
   processByesHandler,
   registerParticipantForTournamentEventHandler,
@@ -30,6 +35,7 @@ import {
   runSchedulerHandler,
   startRefereeMatchHandler,
   startMatchHandler,
+  updateTournamentStaffHandler,
   updateRegistrationHandler,
   updateRefereeMatchSetsHandler,
   updateMatchSetsHandler
@@ -47,6 +53,11 @@ router.post("/referee/matches/:matchId/complete", auth, completeRefereeMatchHand
 
 router.get("/", auth, listTournamentsHandler);
 router.post("/", auth, createTournamentHandler);
+router.get("/staff/meta", auth, getTournamentStaffMetaHandler);
+router.get("/staff", auth, listTournamentStaffHandler);
+router.post("/staff", auth, createTournamentStaffHandler);
+router.patch("/staff/:userId", auth, updateTournamentStaffHandler);
+router.delete("/staff/:userId", auth, deleteTournamentStaffHandler);
 router.patch("/:tournamentId", auth, updateTournamentHandler);
 router.delete("/:tournamentId", auth, deleteTournamentHandler);
 
@@ -58,6 +69,11 @@ router.patch(
   "/:tournamentId/registrations/:registrationId",
   auth,
   updateRegistrationHandler
+);
+router.post(
+  "/:tournamentId/registrations/:registrationId/approve-participant",
+  auth,
+  approveRegistrationParticipantHandler
 );
 router.post("/:tournamentId/events", auth, createEventHandler);
 router.patch("/:tournamentId/events/:eventId", auth, updateEventHandler);

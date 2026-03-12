@@ -5,39 +5,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>AlphaGrips Admin</title>
     <link rel="stylesheet" href="./css/dashboard.css" />
+    <script src="../shared/portalAccess.js"></script>
     <script>
       (function () {
-        const token = localStorage.getItem("token");
-        const isParentRole = function (roleValue) {
-          return String(roleValue || "").toLowerCase().startsWith("parent");
-        };
-        const isParentRoleId = function (roleIdValue) {
-          return String(roleIdValue || "") === "4";
-        };
-        const decodeRoleFromToken = function (jwtToken) {
-          try {
-            const payload = jwtToken.split(".")[1];
-            const normalized = payload.replace(/-/g, "+").replace(/_/g, "/");
-            const decoded = JSON.parse(atob(normalized));
-            return {
-              role: String(decoded.role || decoded.role_name || "").toLowerCase(),
-              roleId: String(decoded.role_id || "")
-            };
-          } catch (error) {
-            return { role: "", roleId: "" };
-          }
-        };
-        const tokenMeta = decodeRoleFromToken(token || "");
-        const role = tokenMeta.role || String(localStorage.getItem("role") || "").toLowerCase();
-        const roleId = tokenMeta.roleId || String(localStorage.getItem("role_id") || "");
+        const access = window.AGPortalAccess;
+        const { token, role, roleId } = access.getStoredAuthMeta();
 
         if (!token) {
-          window.location.replace("/Public/login.html");
+          window.location.replace("/Public/login.html?portal=academy");
           return;
         }
 
-        if (isParentRole(role) || isParentRoleId(roleId)) {
-          window.location.replace("/Public/parent/index.html");
+        if (!access.isAcademyPortalAllowedRole(role, roleId)) {
+          window.location.replace(access.getPortalUrl(access.getPreferredPortal(role, roleId)));
         }
       })();
     </script>
@@ -69,6 +49,7 @@
           <a href="#academies" data-route="academies" data-manager-only>Academies</a>
           <a href="#users" data-route="users" data-manager-only>Staff</a>
           <a href="#categories" data-route="categories">Categories</a>
+          <a href="#rankings" data-route="rankings">Rankings</a>
           <a href="#fee-plans" data-route="fee-plans">Fee Plans</a>
           <a href="#invoices" data-route="invoices">Invoices</a>
           <a href="#payments" data-route="payments">Payments</a>

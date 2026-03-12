@@ -2,20 +2,28 @@ import tournamentDb from "../../../config/tournamentDb.js";
 import razorpay from "../../../config/razorpay.js";
 import { env, hasRazorpayConfig } from "../../../config/env.js";
 import { ensureTournamentByLookup, ensureTournamentExists } from "./tournamentLookup.service.js";
-import { AppError, normalizeInteger, normalizeText } from "../utils/tournament.utils.js";
+import {
+  AppError,
+  buildExternalPlayerId,
+  canonicalTeamKey,
+  normalizeInteger,
+  normalizeText
+} from "../utils/tournament.utils.js";
 import crypto from "crypto";
 import {
   sendPaymentConfirmedEmail,
   sendRegistrationDecisionEmail,
   sendRegistrationReceivedEmail
 } from "./registrationEmail.service.js";
+import { registerParticipantForEvent } from "./participantRegistration.service.js";
+import { enrichParticipantsWithDisplayNames } from "./participantDisplay.service.js";
 
 const PAYMENT_STATUSES = ["pending", "paid", "rejected"];
 const ENTRY_STATUSES = ["submitted", "approved", "rejected"];
 const ENTRY_TYPES = ["singles", "doubles"];
 const FEE_TYPES = ["inclusive_gst", "exclusive_gst"];
 const GENDER_VALUES = ["Girls", "Boys"];
-const PAYMENT_METHODS = ["online", "upi", "bank_transfer", "cash"];
+const PAYMENT_METHODS = ["online", "upi", "bank_transfer"];
 
 function triggerBackgroundEmail(task) {
   Promise.resolve(task).catch(() => null);
@@ -78,7 +86,7 @@ function normalizePaymentMethod(value, fallback = "online") {
   const normalized = normalizeText(value)?.toLowerCase() || fallback;
 
   if (!PAYMENT_METHODS.includes(normalized)) {
-    throw new AppError("payment_method must be online, upi, bank_transfer, or cash", 400);
+    throw new AppError("payment_method must be online, upi, or bank_transfer", 400);
   }
 
   return normalized;
@@ -186,8 +194,9 @@ function extractPaymentMethod(notes) {
   return match ? match[1].toLowerCase() : "online";
 }
 
-function toRegistrationResponse(registration, entry = null) {
+function toRegistrationResponse(registration, entry = null, participant = null) {
   const safeEntry = entry || {};
+  const safeParticipant = participant || null;
 
   return {
     id: registration.id,
@@ -211,8 +220,88 @@ function toRegistrationResponse(registration, entry = null) {
       entry_type: safeEntry.entry_type || null,
       partner_name: safeEntry.partner_name || null,
       status: safeEntry.status || null
-    }
+    },
+    participant: safeParticipant
+      ? {
+          id: safeParticipant.id,
+          display_name: safeParticipant.display_name || safeParticipant.team_name || null,
+          status: safeParticipant.status || null
+        }
+      : null
   };
+}
+
+async function getTournamentEventsByName(tournamentId) {
+  const { data: events, error } = await tournamentDb
+    .from("events")
+    .select("*")
+    .eq("tournament_id", tournamentId)
+    .order("created_at", { ascending: true });
+
+  if (error) {
+    throw new AppError(error.message, 500);
+  }
+
+  return new Map((events || []).map((event) => [event.event_name, event]));
+}
+
+async function getRegistrationEventForEntry({ tournamentId, entry, requireRegistrationEnabled = false }) {
+  const eventName = normalizeText(entry?.event_name);
+
+  if (!eventName) {
+    throw new AppError("Registration entry is missing event information", 400);
+  }
+
+  const eventMap = await getTournamentEventsByName(tournamentId);
+  const event = eventMap.get(eventName);
+
+  if (!event) {
+    throw new AppError("Event not found for registration", 404);
+  }
+
+  const registration = buildRegistrationSnapshot(event);
+
+  if (requireRegistrationEnabled && !registration.registration_enabled) {
+    throw new AppError("Registration is not open for the selected event", 400);
+  }
+
+  return {
+    ...event,
+    registration
+  };
+}
+
+function buildRegistrationParticipantSeed(registration, entry) {
+  const player1Name = normalizeText(registration?.player_name);
+  const player2Name =
+    normalizeText(entry?.entry_type)?.toLowerCase() === "doubles"
+      ? normalizeText(entry?.partner_name)
+      : null;
+  const player1Id = buildExternalPlayerId(player1Name);
+  const player2Id = buildExternalPlayerId(player2Name);
+
+  return {
+    player1Name,
+    player2Name,
+    player1Id,
+    player2Id,
+    teamKey: canonicalTeamKey(player1Id, player2Id)
+  };
+}
+
+function findExistingRegistrationParticipantRecord({ participants, registration, entry }) {
+  const seed = buildRegistrationParticipantSeed(registration, entry);
+
+  if (!seed.teamKey) {
+    return null;
+  }
+
+  return (
+    (participants || []).find(
+      (participant) =>
+        canonicalTeamKey(participant.player1_id, participant.player2_id) === seed.teamKey
+    ) || null
+  );
 }
 
 async function listRegistrationEnabledEvents(tournamentId) {
@@ -520,9 +609,9 @@ export async function createRegistrationPaymentOrder({
 
     return {
       ...fallbackEvent,
-      registration: buildRegistrationSnapshot(fallbackEvent)
-    };
-  });
+    registration: buildRegistrationSnapshot(fallbackEvent)
+      };
+    });
 
   const payableAmount = event.registration.payable_amount;
 
@@ -672,30 +761,9 @@ export async function verifyRegistrationPayment({
   let emailDelivery = { sent: false, reason: "missing_email" };
 
   if (emailAddress) {
-    const event = await ensureRegistrationEvent({
+    const event = await getRegistrationEventForEntry({
       tournamentId: tournament.id,
-      eventId: entry?.event_id || null
-    }).catch(async () => {
-      const { data: events, error } = await tournamentDb
-        .from("events")
-        .select("*")
-        .eq("tournament_id", tournament.id)
-        .eq("event_name", entry?.event_name)
-        .limit(1);
-
-      if (error) {
-        throw new AppError(error.message, 500);
-      }
-
-      const fallbackEvent = events?.[0];
-      if (!fallbackEvent) {
-        throw new AppError("Event not found for payment", 404);
-      }
-
-      return {
-        ...fallbackEvent,
-        registration: buildRegistrationSnapshot(fallbackEvent)
-      };
+      entry
     });
 
     emailDelivery = await sendPaymentConfirmedEmail({
@@ -744,22 +812,59 @@ export async function listTournamentRegistrations(tournamentId) {
     entryRows = data || [];
   }
 
-  const events = await listRegistrationEnabledEvents(tournamentId);
-  const eventIdByName = new Map(events.map((event) => [event.event_name, event.id]));
+  const eventMap = await getTournamentEventsByName(tournamentId);
   const entryByRegistration = new Map();
 
   for (const entry of entryRows) {
     if (!entryByRegistration.has(entry.registration_id)) {
       entryByRegistration.set(entry.registration_id, {
         ...entry,
-        event_id: eventIdByName.get(entry.event_name) || null
+        event_id: eventMap.get(entry.event_name)?.id || null
       });
     }
   }
 
-  return (registrations || []).map((registration) =>
-    toRegistrationResponse(registration, entryByRegistration.get(registration.id) || null)
-  );
+  const eventIds = [...new Set(
+    [...entryByRegistration.values()].map((entry) => entry.event_id).filter(Boolean)
+  )];
+  let participants = [];
+
+  if (eventIds.length) {
+    const { data, error: participantsError } = await tournamentDb
+      .from("participants")
+      .select("*")
+      .eq("tournament_id", tournamentId)
+      .in("event_id", eventIds);
+
+    if (participantsError) {
+      throw new AppError(participantsError.message, 500);
+    }
+
+    participants = await enrichParticipantsWithDisplayNames(data || []);
+  }
+
+  const participantsByEventId = participants.reduce((map, participant) => {
+    if (!map.has(participant.event_id)) {
+      map.set(participant.event_id, []);
+    }
+
+    map.get(participant.event_id).push(participant);
+    return map;
+  }, new Map());
+
+  return (registrations || []).map((registration) => {
+    const entry = entryByRegistration.get(registration.id) || null;
+    const participant =
+      entry?.event_id
+        ? findExistingRegistrationParticipantRecord({
+            participants: participantsByEventId.get(entry.event_id) || [],
+            registration,
+            entry
+          })
+        : null;
+
+    return toRegistrationResponse(registration, entry, participant);
+  });
 }
 
 export async function updateTournamentRegistration({
@@ -836,9 +941,13 @@ export async function updateTournamentRegistration({
     throw new AppError(entriesError.message, 500);
   }
 
-  const events = await listRegistrationEnabledEvents(tournamentId);
-  const eventId =
-    events.find((event) => event.event_name === updatedEntry?.event_name)?.id || null;
+  const event = updatedEntry
+    ? await getRegistrationEventForEntry({
+        tournamentId,
+        entry: updatedEntry
+      }).catch(() => null)
+    : null;
+  const eventId = event?.id || null;
   const response = toRegistrationResponse(
     updatedRegistration,
     updatedEntry ? { ...updatedEntry, event_id: eventId } : null
@@ -862,19 +971,156 @@ export async function updateTournamentRegistration({
       registration.payment_status !== updatedRegistration.payment_status &&
       updatedRegistration.payment_status === "paid"
     ) {
-      const event = events.find((item) => item.id === eventId)?.registration || null;
       emailDelivery = await sendPaymentConfirmedEmail({
         to: emailAddress,
         tournament,
         registration: response,
         event: response.event,
-        pricing: event
+        pricing: event?.registration || null
       });
     }
   }
 
   return {
     ...response,
+    email_delivery: emailDelivery
+  };
+}
+
+export async function approveRegistrationToParticipant({
+  tournamentId,
+  registrationId,
+  input = {}
+}) {
+  const tournament = await ensureTournamentExists(tournamentId);
+  const { registration, entry } = await getRegistrationWithEntry({
+    tournamentId,
+    registrationId
+  });
+
+  if (!entry) {
+    throw new AppError("Registration entry not found", 404);
+  }
+
+  const requestedPaymentStatus = normalizePaymentStatus(
+    input.payment_status,
+    registration.payment_status
+  );
+
+  if (requestedPaymentStatus !== "paid") {
+    throw new AppError(
+      "Only paid registrations can be approved into the participant list",
+      409
+    );
+  }
+
+  const event = await getRegistrationEventForEntry({
+    tournamentId,
+    entry
+  });
+
+  const { data: existingParticipants, error: participantsError } = await tournamentDb
+    .from("participants")
+    .select("*")
+    .eq("tournament_id", tournamentId)
+    .eq("event_id", event.id);
+
+  if (participantsError) {
+    throw new AppError(participantsError.message, 500);
+  }
+
+  let participant = findExistingRegistrationParticipantRecord({
+    participants: existingParticipants || [],
+    registration,
+    entry
+  });
+  let participantCreated = false;
+
+  if (!participant) {
+    participant = await registerParticipantForEvent({
+      tournamentId,
+      eventId: event.id,
+      input: {
+        player1_name: registration.player_name,
+        player2_name:
+          normalizeText(entry.entry_type)?.toLowerCase() === "doubles"
+            ? entry.partner_name
+            : null,
+        status: "active",
+        metadata: {
+          source: "public_registration",
+          registration_id: registration.id,
+          registration_entry_id: entry.id
+        }
+      }
+    });
+    participantCreated = true;
+  }
+
+  const updatedNotes = appendRegistrationNote(
+    normalizeText(input.notes) ?? registration.notes,
+    participantCreated
+      ? `Approved and added to participants: ${participant.id}`
+      : `Participant already exists in event: ${participant.id}`
+  );
+
+  const { data: updatedRegistration, error: registrationUpdateError } = await tournamentDb
+    .from("registrations")
+    .update({
+      payment_status: "paid",
+      notes: updatedNotes,
+      updated_at: new Date().toISOString()
+    })
+    .eq("id", registrationId)
+    .select("*")
+    .single();
+
+  if (registrationUpdateError) {
+    throw new AppError(registrationUpdateError.message, 500);
+  }
+
+  const { data: updatedEntry, error: entryUpdateError } = await tournamentDb
+    .from("registration_entries")
+    .update({
+      status: "approved"
+    })
+    .eq("id", entry.id)
+    .eq("registration_id", registrationId)
+    .select("*")
+    .single();
+
+  if (entryUpdateError) {
+    throw new AppError(entryUpdateError.message, 500);
+  }
+
+  const [enrichedParticipant] = await enrichParticipantsWithDisplayNames([participant]);
+  const response = toRegistrationResponse(
+    updatedRegistration,
+    {
+      ...updatedEntry,
+      event_id: event.id
+    },
+    enrichedParticipant || participant
+  );
+  const emailAddress = response.email;
+  let emailDelivery = null;
+
+  if (emailAddress) {
+    emailDelivery = await sendRegistrationDecisionEmail({
+      to: emailAddress,
+      tournament,
+      registration: response,
+      event: response.event,
+      decision: "approved"
+    });
+  }
+
+  return {
+    message: participantCreated
+      ? "Registration approved and participant added"
+      : "Registration already had a participant in this event",
+    registration: response,
+    participant_created: participantCreated,
     email_delivery: emailDelivery
   };
 }

@@ -99,7 +99,7 @@ function getPaymentMethodLabel(value) {
     return "Bank Transfer";
   }
   if (value === "cash") {
-    return "Cash";
+    return "Legacy Cash";
   }
   return "Pending";
 }
@@ -340,15 +340,7 @@ function renderPaymentHelp() {
     `;
   }
 
-  return `
-    <div class="registration-help-card">
-      <p class="registration-kicker">Cash Payment</p>
-      <h3>Pay at the tournament desk</h3>
-      <p>The entry will stay pending until the desk confirms receipt of ${escapeHtml(
-        formatMoney(payableAmount)
-      )}.</p>
-    </div>
-  `;
+  return "";
 }
 
 function renderForm() {
@@ -482,9 +474,6 @@ function renderForm() {
                 <option value="bank_transfer" ${
                   state.form.payment_method === "bank_transfer" ? "selected" : ""
                 }>Bank Transfer</option>
-                <option value="cash" ${
-                  state.form.payment_method === "cash" ? "selected" : ""
-                }>Cash</option>
               </select>
             </div>
 

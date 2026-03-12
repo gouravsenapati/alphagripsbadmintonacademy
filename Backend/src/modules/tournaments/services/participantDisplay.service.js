@@ -49,8 +49,10 @@ export async function fetchPlayerNameMap(playerIds) {
     .select("id,name")
     .in("id", ids);
 
+  // Tournament draws should still render even when the academy players view is unavailable.
   if (error) {
-    throw new AppError(error.message, 500);
+    console.error("[tournament] player name lookup fallback:", error.message);
+    return new Map();
   }
 
   return new Map(

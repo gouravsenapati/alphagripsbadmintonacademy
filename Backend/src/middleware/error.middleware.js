@@ -1,9 +1,11 @@
-export function errorHandler(err,req,res,next){
+import { normalizeTournamentSchemaError } from "../config/tournamentSchema.js";
 
-console.error("ERROR:",err);
+export function errorHandler(err, req, res, next) {
+  const normalizedError = normalizeTournamentSchemaError(err);
 
-res.status(500).json({
-error:err.message || "Internal server error"
-});
+  console.error("ERROR:", normalizedError);
 
+  res.status(normalizedError.statusCode || 500).json({
+    error: normalizedError.message || "Internal server error"
+  });
 }

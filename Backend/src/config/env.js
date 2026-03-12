@@ -9,8 +9,8 @@ const projectRoot = path.resolve(__dirname, "../../../");
 
 const envCandidates = [
   process.env.DOTENV_CONFIG_PATH,
-  path.join(projectRoot, ".env"),
-  path.join(projectRoot, "Backend", ".env")
+  path.join(projectRoot, "Backend", ".env"),
+  path.join(projectRoot, ".env")
 ].filter(Boolean);
 
 for (const envPath of envCandidates) {
@@ -35,6 +35,7 @@ export const env = {
   SUPABASE_URL: requireEnv("SUPABASE_URL"),
   SUPABASE_KEY: requireEnv("SUPABASE_KEY"),
   JWT_SECRET: requireEnv("JWT_SECRET"),
+  TOURNAMENT_SCHEMA: process.env.TOURNAMENT_SCHEMA || "ag_tournament",
   PLAYER_PHOTO_BUCKET: process.env.PLAYER_PHOTO_BUCKET || "player-photos",
   RAZORPAY_KEY_ID: process.env.RAZORPAY_KEY_ID || "",
   RAZORPAY_KEY_SECRET: process.env.RAZORPAY_KEY_SECRET || "",

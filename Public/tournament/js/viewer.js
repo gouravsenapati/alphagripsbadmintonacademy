@@ -102,6 +102,18 @@ function getPublicDrawSheetUrl(eventId = getSelectedEventId()) {
   return url.toString();
 }
 
+function rememberViewerContext(eventId = getSelectedEventId()) {
+  if (typeof localStorage === "undefined" || !hasText(state.tournamentLookup)) {
+    return;
+  }
+
+  localStorage.setItem("ag_public_tournament_lookup", state.tournamentLookup);
+
+  if (hasText(eventId)) {
+    localStorage.setItem("ag_public_draw_event_id", eventId);
+  }
+}
+
 function getMatchesForEvent(eventId) {
   return (state.matches || []).filter((match) => match.event_id === eventId);
 }
@@ -522,7 +534,7 @@ function renderBracketSection() {
       <div class="viewer-panel-head">
         <div>
           <p class="viewer-kicker">Draws</p>
-          <h2>${escapeHtml(event.event_name)} bracket</h2>
+          <h2>${escapeHtml(event.event_name)} draw</h2>
         </div>
         <div class="viewer-panel-actions">
           <a
@@ -774,6 +786,7 @@ function renderViewer() {
   document.querySelectorAll('[data-action="select-event"]').forEach((button) => {
     button.addEventListener("click", () => {
       state.activeEventId = button.dataset.eventId || "";
+      rememberViewerContext(state.activeEventId);
       renderViewer();
     });
   });
@@ -798,6 +811,7 @@ async function init() {
     state.matches = matches || [];
     state.activeEventId = overview?.events?.[0]?.id || "";
     state.error = "";
+    rememberViewerContext(state.activeEventId);
     renderViewer();
   } catch (error) {
     state.error = error.message;

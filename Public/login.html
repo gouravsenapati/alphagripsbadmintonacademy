@@ -3,15 +3,21 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Login – AlphaGrips</title>
-
+<title>Login - AlphaGrips</title>
+<script src="./shared/portalAccess.js"></script>
 <style>
 :root {
-  --primary: #2563eb;
-  --bg-dark: #0f172a;
-  --card-bg: rgba(255, 255, 255, 0.95);
-  --text-dark: #1e293b;
-  --text-light: #64748b;
+  --navy: #1d2c63;
+  --navy-deep: #101b3f;
+  --orange: #f28a1b;
+  --surface: #f6f0e5;
+  --surface-strong: rgba(255, 255, 255, 0.94);
+  --border: #d9d4cb;
+  --text: #1f2a44;
+  --muted: #5f6b85;
+  --success: #2f8f57;
+  --danger: #c53d2f;
+  --shadow: 0 24px 60px rgba(12, 18, 38, 0.18);
 }
 
 * {
@@ -21,174 +27,512 @@
 body {
   margin: 0;
   font-family: "Segoe UI", Arial, sans-serif;
-  height: 100vh;
-  display: flex;
-  background: linear-gradient(135deg, #0f172a, #1e3a8a);
-  overflow: hidden;
+  color: var(--text);
+  background:
+    radial-gradient(circle at top left, rgba(242, 138, 27, 0.18), transparent 30%),
+    linear-gradient(135deg, var(--navy-deep), var(--navy));
+  min-height: 100vh;
 }
 
-/* Left Side Branding */
-.left {
-  flex: 1;
+.login-shell {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: minmax(320px, 0.95fr) minmax(340px, 420px);
+}
+
+.login-hero {
+  padding: 48px 56px;
   display: flex;
   flex-direction: column;
   justify-content: center;
-  padding: 80px;
-  color: white;
+  gap: 22px;
+  color: #ffffff;
 }
 
-.left h1 {
-  font-size: 42px;
-  margin-bottom: 20px;
+.hero-kicker {
+  margin: 0;
+  font-size: 13px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.74);
 }
 
-.left p {
-  font-size: 18px;
-  color: #cbd5e1;
-  max-width: 400px;
+.hero-title {
+  margin: 0;
+  max-width: 620px;
+  font-size: clamp(30px, 3.3vw, 46px);
+  line-height: 1.08;
 }
 
-/* Right Side Login */
-.right {
-  width: 420px;
+.hero-copy {
+  margin: 0;
+  max-width: 500px;
+  font-size: 16px;
+  line-height: 1.6;
+  color: rgba(255, 255, 255, 0.82);
+}
+
+.portal-pills {
   display: flex;
-  justify-content: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.portal-pill {
+  display: inline-flex;
   align-items: center;
-  background: #f1f5f9;
+  gap: 8px;
+  padding: 10px 14px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  color: #ffffff;
+  text-decoration: none;
+  font-weight: 600;
+  transition: 0.2s ease;
+}
+
+.portal-pill:hover,
+.portal-pill.active {
+  background: rgba(242, 138, 27, 0.22);
+  border-color: rgba(242, 138, 27, 0.62);
+}
+
+.hero-note-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.hero-note {
+  padding: 16px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  backdrop-filter: blur(10px);
+}
+
+.hero-note strong {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 14px;
+}
+
+.hero-note span {
+  display: block;
+  font-size: 14px;
+  line-height: 1.55;
+  color: rgba(255, 255, 255, 0.76);
+}
+
+.login-panel {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 28px;
+  background: linear-gradient(180deg, rgba(246, 240, 229, 0.96), rgba(255, 255, 255, 0.96));
 }
 
 .card {
-  width: 340px;
-  background: var(--card-bg);
-  padding: 40px;
-  border-radius: 14px;
-  box-shadow: 0 20px 50px rgba(0,0,0,0.15);
-  text-align: center;
+  width: 100%;
+  background: var(--surface-strong);
+  border: 1px solid rgba(29, 44, 99, 0.08);
+  border-radius: 24px;
+  box-shadow: var(--shadow);
+  padding: 28px 28px 24px;
+}
+
+.card-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: rgba(242, 138, 27, 0.14);
+  color: var(--orange);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.context-line {
+  margin: 8px 0 0;
+  font-size: 14px;
+  color: var(--muted);
+  line-height: 1.6;
 }
 
 .card h2 {
-  margin-bottom: 25px;
-  color: var(--text-dark);
+  margin: 12px 0 0;
+  font-size: 28px;
+  line-height: 1.15;
 }
 
-.back-links {
+.target-card {
+  margin: 0 0 22px;
+  padding: 16px 18px;
+  border-radius: 18px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+}
+
+.target-card strong {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 15px;
+}
+
+.target-card span {
+  display: block;
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--muted);
+}
+
+.field {
+  margin-bottom: 14px;
+}
+
+.field label {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.field input {
+  width: 100%;
+  padding: 13px 14px;
+  border-radius: 14px;
+  border: 1px solid #cfd5df;
+  background: #ffffff;
+  color: var(--text);
+  font-size: 15px;
+  transition: border-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.field input:focus {
+  outline: none;
+  border-color: var(--orange);
+  box-shadow: 0 0 0 4px rgba(242, 138, 27, 0.16);
+}
+
+.primary-btn {
+  width: 100%;
+  padding: 13px 15px;
+  border: none;
+  border-radius: 14px;
+  background: linear-gradient(135deg, var(--orange), #f59b35);
+  color: #ffffff;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+
+.primary-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 14px 28px rgba(242, 138, 27, 0.24);
+}
+
+.error {
+  min-height: 20px;
+  margin: 12px 0 0;
+  color: var(--danger);
+  font-size: 14px;
+}
+
+.quick-links {
   display: grid;
   gap: 10px;
-  margin-top: 18px;
+  margin-top: 22px;
 }
 
-.back-link {
+.quick-link {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 100%;
-  padding: 11px 12px;
-  border-radius: 8px;
-  border: 1px solid #d1d5db;
-  background: white;
-  color: var(--text-dark);
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: #ffffff;
+  color: var(--text);
   text-decoration: none;
   font-size: 14px;
   font-weight: 600;
-  transition: 0.2s;
+  transition: border-color 0.18s ease, transform 0.18s ease, color 0.18s ease;
 }
 
-.back-link:hover {
-  border-color: var(--primary);
-  color: var(--primary);
+.quick-link:hover {
+  border-color: var(--navy);
+  color: var(--navy);
   transform: translateY(-1px);
 }
 
-input {
-  width: 100%;
-  padding: 12px;
-  margin-bottom: 15px;
-  border-radius: 8px;
-  border: 1px solid #d1d5db;
-  font-size: 14px;
-  transition: 0.2s;
-}
-
-input:focus {
-  outline: none;
-  border-color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2);
-}
-
-button {
-  width: 100%;
-  padding: 12px;
-  border-radius: 8px;
-  border: none;
-  background: var(--primary);
-  color: white;
-  font-size: 15px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: 0.2s;
-}
-
-button:hover {
-  background: #1e40af;
-}
-
-#error {
-  margin-top: 10px;
-  color: #dc2626;
-  font-size: 14px;
-}
-
-/* Responsive */
-@media (max-width: 900px) {
-  .left {
-    display: none;
+@media (max-width: 1100px) {
+  .login-shell {
+    grid-template-columns: 1fr;
   }
-  .right {
-    width: 100%;
+
+  .login-hero {
+    padding: 34px 24px 16px;
+  }
+
+  .hero-note-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .login-panel {
+    padding: 16px 16px 24px;
+  }
+}
+
+@media (max-width: 640px) {
+  .login-hero {
+    gap: 18px;
+    padding: 28px 18px 12px;
+  }
+
+  .card {
+    padding: 22px 18px;
+    border-radius: 20px;
+  }
+
+  .card h2 {
+    font-size: 25px;
   }
 }
 </style>
 </head>
 
 <body>
+<div class="login-shell">
+  <section class="login-hero">
+    <div>
+      <p class="hero-kicker" id="heroKicker">AlphaGrips Access</p>
+      <h1 class="hero-title" id="heroTitle">Choose the right login for the right job.</h1>
+      <p class="hero-copy" id="heroCopy">
+        Academy operations, tournament operations, court control, and parent access should feel
+        clearly separated so staff always know where they are signing in.
+      </p>
+    </div>
 
-<div class="left">
-  <h1>Welcome to AlphaGrips</h1>
-  <p>
-    Manage players, matches, rankings, and finance seamlessly
-    with a powerful academy management system.
-  </p>
+    <div class="portal-pills" id="portalPills"></div>
+
+    <div class="hero-note-grid" id="heroNotes"></div>
+  </section>
+
+  <section class="login-panel">
+    <div class="card">
+      <div class="card-top">
+        <div>
+          <span class="badge" id="portalBadge">Academy Portal</span>
+          <h2 id="cardTitle">Academy Login</h2>
+          <p class="context-line" id="cardContext">
+            Use this path for AlphaGrips academy work like players, batches, attendance, fees, and reports.
+          </p>
+        </div>
+      </div>
+
+      <div class="target-card">
+        <strong id="targetTitle">After login</strong>
+        <span id="targetDescription">You will enter the AlphaGrips academy admin dashboard.</span>
+      </div>
+
+      <div class="field">
+        <label for="email">Email</label>
+        <input id="email" type="email" placeholder="Enter your email" />
+      </div>
+
+      <div class="field">
+        <label for="password">Password</label>
+        <input id="password" type="password" placeholder="Enter your password" />
+      </div>
+
+      <button class="primary-btn" onclick="login()" id="loginButton">Login to Academy</button>
+
+      <p class="error" id="error"></p>
+
+      <div class="quick-links" id="quickLinks"></div>
+    </div>
+  </section>
 </div>
 
-<div class="right">
-  <div class="card">
-    <h2>Login</h2>
-
-    <input id="email" placeholder="Email">
-    <input id="password" type="password" placeholder="Password">
-
-    <button onclick="login()">Login</button>
-
-    <p id="error"></p>
-
-    <div class="back-links">
-      <a class="back-link" href="/Public/index.html">Back to Home</a>
-      <a class="back-link" href="/Public/tournament.html">Go to Tournament Hub</a>
-      <a class="back-link" href="/Public/parent/index.html">Parent Portal</a>
-    </div>
-  </div>
-</div><script type="module">
+<script type="module">
 import { getApiBase } from "./shared/runtime.js";
 
 const API = getApiBase();
+const portalAccess = window.AGPortalAccess;
+const searchParams = new URLSearchParams(window.location.search);
+const redirectTarget = searchParams.get("redirect") || "";
+const portal = (searchParams.get("portal") || "").toLowerCase();
+
+const PORTALS = {
+  academy: {
+    badge: "Academy Portal",
+    heroKicker: "AlphaGrips Academy",
+    heroTitle: "Login for daily academy operations.",
+    heroCopy:
+      "This is the main AlphaGrips admin path for players, staff, categories, batches, attendance, fees, rankings, and reports.",
+    cardTitle: "Academy Login",
+    cardContext:
+      "Best for super admin, academy admin, head coach, coach, and office staff doing normal academy work.",
+    targetTitle: "After login",
+    targetDescription: "You will enter the AlphaGrips academy admin dashboard.",
+    button: "Login to Academy"
+  },
+  tournament: {
+    badge: "Tournament Console",
+    heroKicker: "Tournament Operations",
+    heroTitle: "Login only when you need tournament control.",
+    heroCopy:
+      "Use this path for tournament setup, live operations, draws, scoring, registrations, and results. This stays separate from normal academy workflows.",
+    cardTitle: "Tournament Staff Login",
+    cardContext:
+      "Best for tournament admin and staff managing events, draws, live scoring, and control desk activity.",
+    targetTitle: "After login",
+    targetDescription: "You will go directly into the tournament console.",
+    button: "Login to Tournament Console"
+  },
+  referee: {
+    badge: "Court Official",
+    heroKicker: "Court Control",
+    heroTitle: "Login for referee or court official duties.",
+    heroCopy:
+      "Use this only for court-level operations. Officials can claim courts, start assigned matches, enter scores, and complete results.",
+    cardTitle: "Court Official Login",
+    cardContext:
+      "Best for referees and court officials who should only see their assigned match flow.",
+    targetTitle: "After login",
+    targetDescription: "You will go directly to the court official console.",
+    button: "Login to Court Console"
+  }
+};
+
+function resolvePortal() {
+  if (portal === "tournament" || redirectTarget.includes("/Public/tournament/index.html")) {
+    return "tournament";
+  }
+
+  if (portal === "referee" || redirectTarget.includes("/Public/tournament/referee.html")) {
+    return "referee";
+  }
+
+  return "academy";
+}
+
+const activePortal = resolvePortal();
+const activeConfig = PORTALS[activePortal];
+
+function renderPortalPills() {
+  const pills = [
+    {
+      key: "academy",
+      label: "Academy Admin",
+      href: "/Public/login.html?portal=academy"
+    },
+    {
+      key: "tournament",
+      label: "Tournament Staff",
+      href: "/Public/login.html?portal=tournament&redirect=/Public/tournament/index.html#tournaments"
+    },
+    {
+      key: "referee",
+      label: "Court Official",
+      href: "/Public/login.html?portal=referee&redirect=/Public/tournament/referee.html"
+    },
+    {
+      key: "parent",
+      label: "Parent Portal",
+      href: "/Public/parent/index.html"
+    }
+  ];
+
+  document.getElementById("portalPills").innerHTML = pills
+    .map(
+      (entry) => `
+        <a class="portal-pill ${entry.key === activePortal ? "active" : ""}" href="${entry.href}">
+          ${entry.label}
+        </a>
+      `
+    )
+    .join("");
+}
+
+function renderHeroNotes() {
+  const notes = [
+    {
+      title: "Academy Login",
+      copy: "Players, staff, attendance, fees, rankings, and daily operations."
+    },
+    {
+      title: "Tournament Login",
+      copy: "Events, registrations, draws, courts, and live scoring."
+    },
+    {
+      title: "Court Official Login",
+      copy: "Claim a court, start the match, score it, and finish it."
+    }
+  ];
+
+  document.getElementById("heroNotes").innerHTML = notes
+    .map(
+      (note) => `
+        <article class="hero-note">
+          <strong>${note.title}</strong>
+          <span>${note.copy}</span>
+        </article>
+      `
+    )
+    .join("");
+}
+
+function renderQuickLinks() {
+  const links = [
+    { label: "Back to Home", href: "/Public/index.html" },
+    { label: "Open Tournament Hub", href: "/Public/tournament.html" },
+    { label: "Go to Parent Portal", href: "/Public/parent/index.html" }
+  ];
+
+  document.getElementById("quickLinks").innerHTML = links
+    .map(
+      (link) => `
+        <a class="quick-link" href="${link.href}">${link.label}</a>
+      `
+    )
+    .join("");
+}
+
+function renderPortalContext() {
+  document.getElementById("heroKicker").textContent = activeConfig.heroKicker;
+  document.getElementById("heroTitle").textContent = activeConfig.heroTitle;
+  document.getElementById("heroCopy").textContent = activeConfig.heroCopy;
+  document.getElementById("portalBadge").textContent = activeConfig.badge;
+  document.getElementById("cardTitle").textContent = activeConfig.cardTitle;
+  document.getElementById("cardContext").textContent = activeConfig.cardContext;
+  document.getElementById("targetTitle").textContent = activeConfig.targetTitle;
+  document.getElementById("targetDescription").textContent = activeConfig.targetDescription;
+  document.getElementById("loginButton").textContent = activeConfig.button;
+}
+
+renderPortalContext();
+renderPortalPills();
+renderHeroNotes();
+renderQuickLinks();
 
 window.login = async function login() {
-
   document.getElementById("error").innerText = "";
   ["token", "role", "role_id", "academy_id", "email"].forEach((key) => localStorage.removeItem(key));
 
   try {
-
     const res = await fetch(`${API}/auth/login`, {
       method: "POST",
       headers: {
@@ -203,8 +547,7 @@ window.login = async function login() {
     const data = await res.json();
 
     if (!res.ok) {
-      document.getElementById("error").innerText =
-        data.error || "Login failed";
+      document.getElementById("error").innerText = data.error || "Login failed";
       return;
     }
 
@@ -214,21 +557,30 @@ window.login = async function login() {
     localStorage.setItem("academy_id", data.academy_id);
     localStorage.setItem("email", data.email);
 
-    const redirect = new URLSearchParams(window.location.search).get("redirect");
-    const defaultTarget = String(data.role || "").toLowerCase().startsWith("parent")
-      ? "/Public/parent/index.html"
-      : "dashboard/index.html#players";
-    window.location.href = redirect || defaultTarget;
+    const roleName = portalAccess.normalizeRoleName(data.role || data.role_name);
+    const preferredPortal = portalAccess.getPreferredPortal(roleName, data.role_id);
+    const defaultTarget = portalAccess.getPortalUrl(preferredPortal);
 
-  } catch (err) {
-    document.getElementById("error").innerText =
-      "Server connection failed";
+    if (activePortal === "academy" && preferredPortal !== "academy") {
+      window.location.href = defaultTarget;
+      return;
+    }
+
+    if (activePortal === "tournament" && preferredPortal === "referee") {
+      window.location.href = defaultTarget;
+      return;
+    }
+
+    if (activePortal === "referee" && preferredPortal === "parent") {
+      window.location.href = defaultTarget;
+      return;
+    }
+
+    window.location.href = redirectTarget || defaultTarget;
+  } catch (error) {
+    document.getElementById("error").innerText = "Server connection failed";
   }
-
 };
-
 </script>
-
 </body>
-
 </html>

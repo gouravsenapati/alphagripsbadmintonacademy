@@ -3,6 +3,10 @@ import { randomUUID } from "crypto";
 import bcrypt from "bcryptjs";
 import supabase from "../../config/db.js";
 import tournamentDb from "../../config/tournamentDb.js";
+import {
+  isInvalidTournamentSchemaError,
+  buildTournamentSchemaAccessError
+} from "../../config/tournamentSchema.js";
 import { auth } from "../../middleware/auth.middleware.js";
 import { applyAcademyFilter } from "../../middleware/academyFilter.js";
 
@@ -624,6 +628,10 @@ async function ensurePlayerCanBeDeleted(playerId) {
       throw deleteError;
     }
   } catch (error) {
+    if (isInvalidTournamentSchemaError(error)) {
+      throw buildTournamentSchemaAccessError();
+    }
+
     if (/relation .*participants.* does not exist/i.test(error.message || "")) {
       return;
     }
@@ -860,3 +868,6 @@ router.delete("/:id", auth, async (req, res) => {
 });
 
 export default router;
+
+
+

@@ -6,13 +6,20 @@
     <title>AlphaGrips Referee Console</title>
     <link rel="stylesheet" href="../dashboard/css/dashboard.css" />
     <link rel="stylesheet" href="./css/referee.css" />
+    <script src="../shared/portalAccess.js"></script>
     <script>
       (function () {
-        const token = localStorage.getItem("token");
+        const access = window.AGPortalAccess;
+        const { token, role, roleId } = access.getStoredAuthMeta();
 
         if (!token) {
           const redirect = encodeURIComponent("/Public/tournament/referee.html");
-          window.location.replace(`/Public/login.html?redirect=${redirect}`);
+          window.location.replace(`/Public/login.html?portal=referee&redirect=${redirect}`);
+          return;
+        }
+
+        if (access.isParentRole(role, roleId)) {
+          window.location.replace(access.getPortalUrl("parent"));
         }
       })();
     </script>

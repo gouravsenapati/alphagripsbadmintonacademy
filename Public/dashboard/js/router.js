@@ -13,6 +13,7 @@ import { renderFeePlans } from "./modules/feePlans.js";
 import { renderInvoices } from "./modules/invoices.js";
 import { renderPayments } from "./modules/payments.js";
 import { renderReceipts } from "./modules/receipts.js";
+import { renderRankings } from "./modules/rankings.js";
 
 const USER_MANAGER_ROLES = new Set(["super_admin", "head_coach", "academy_admin"]);
 
@@ -28,6 +29,7 @@ const routes = {
   fitness: renderFitness,
   "match-matrix": renderMatchMatrix,
   "player-match-log": renderPlayerMatchLog,
+  rankings: renderRankings,
   "fee-plans": renderFeePlans,
   invoices: renderInvoices,
   payments: renderPayments,
@@ -65,6 +67,16 @@ function isParentUser() {
   return getStoredRole().startsWith("parent") || String(localStorage.getItem("role_id") || "") === "4";
 }
 
+function isTournamentOnlyUser() {
+  const access = window.AGPortalAccess;
+
+  if (!access) {
+    return false;
+  }
+
+  return access.isTournamentOnlyRole(getStoredRole());
+}
+
 function collapseSidebarForMobile() {
   if (window.innerWidth < 1100 && typeof window.closeSidebar === "function") {
     window.closeSidebar();
@@ -92,6 +104,13 @@ function setActiveNav(route) {
 function loadRoute() {
   if (isParentUser()) {
     window.location.replace("/Public/parent/index.html");
+    return;
+  }
+
+   if (isTournamentOnlyUser()) {
+    const access = window.AGPortalAccess;
+    const targetPortal = access.isRefereePreferredRole(getStoredRole()) ? "referee" : "tournament";
+    window.location.replace(access.getPortalUrl(targetPortal));
     return;
   }
 

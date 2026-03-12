@@ -1,4 +1,5 @@
 import {
+  approveRegistrationToParticipant,
   createRegistrationPaymentOrder,
   createCourt,
   createEvent,
@@ -52,16 +53,41 @@ import {
   startRefereeAssignedMatch
 } from "../services/referee.service.js";
 import {
+  createTournamentStaffUser,
+  deleteTournamentStaffUser,
+  getTournamentStaffMeta,
+  listTournamentStaffUsers,
+  updateTournamentStaffUser
+} from "../services/tournamentStaff.service.js";
+import {
   AppError,
   assertInteger,
   assertUuid,
   normalizeInteger,
   normalizeText
 } from "../utils/tournament.utils.js";
+import { normalizeTournamentSchemaError } from "../../../config/tournamentSchema.js";
 
-function sendError(res, error) {
-  const statusCode = error.statusCode || 500;
-  return res.status(statusCode).json({ error: error.message || "Internal server error" });
+function logControllerError(scope, error) {
+  console.error(`[tournaments] ${scope}`);
+  console.error({
+    name: error?.name,
+    message: error?.message,
+    statusCode: error?.statusCode,
+    code: error?.code,
+    details: error?.details,
+    hint: error?.hint,
+    stack: error?.stack
+  });
+}
+
+function sendError(res, error, scope = "unknown") {
+  const normalizedError = normalizeTournamentSchemaError(error);
+  logControllerError(scope, normalizedError);
+  const statusCode = normalizedError.statusCode || 500;
+  return res
+    .status(statusCode)
+    .json({ error: normalizedError.message || "Internal server error" });
 }
 
 function parseTournamentId(value) {
@@ -104,7 +130,85 @@ export async function listTournamentsHandler(req, res) {
     const data = await listTournaments({ academyId: req.user?.academy_id || null });
     res.json(data);
   } catch (error) {
-    sendError(res, error);
+    sendError(res, error, "listTournamentsHandler");
+  }
+}
+
+export async function getTournamentStaffMetaHandler(req, res) {
+  try {
+    const tournamentId = parseTournamentId(req.query.tournamentId);
+    const meta = await getTournamentStaffMeta({ req, tournamentId });
+    return res.json(meta);
+  } catch (error) {
+    return sendError(res, error, "getTournamentStaffMetaHandler");
+  }
+}
+
+export async function listTournamentStaffHandler(req, res) {
+  try {
+    const tournamentId = parseTournamentId(req.query.tournamentId);
+    const users = await listTournamentStaffUsers({ req, tournamentId });
+    return res.json(users);
+  } catch (error) {
+    return sendError(res, error, "listTournamentStaffHandler");
+  }
+}
+
+export async function createTournamentStaffHandler(req, res) {
+  try {
+    const tournamentId = parseTournamentId(req.body?.tournament_id);
+    const user = await createTournamentStaffUser({
+      req,
+      tournamentId,
+      payload: req.body || {}
+    });
+
+    return res.status(201).json(user);
+  } catch (error) {
+    return sendError(res, error, "createTournamentStaffHandler");
+  }
+}
+
+export async function updateTournamentStaffHandler(req, res) {
+  try {
+    const tournamentId = parseTournamentId(req.body?.tournament_id);
+    const userId = Number(req.params.userId);
+
+    if (!Number.isInteger(userId) || userId <= 0) {
+      throw new AppError("Invalid userId", 400);
+    }
+
+    const user = await updateTournamentStaffUser({
+      req,
+      tournamentId,
+      userId,
+      payload: req.body || {}
+    });
+
+    return res.json(user);
+  } catch (error) {
+    return sendError(res, error, "updateTournamentStaffHandler");
+  }
+}
+
+export async function deleteTournamentStaffHandler(req, res) {
+  try {
+    const tournamentId = parseTournamentId(req.query.tournamentId);
+    const userId = Number(req.params.userId);
+
+    if (!Number.isInteger(userId) || userId <= 0) {
+      throw new AppError("Invalid userId", 400);
+    }
+
+    const result = await deleteTournamentStaffUser({
+      req,
+      tournamentId,
+      userId
+    });
+
+    return res.json(result);
+  } catch (error) {
+    return sendError(res, error, "deleteTournamentStaffHandler");
   }
 }
 
@@ -115,7 +219,7 @@ export async function listRefereesHandler(req, res) {
     });
     res.json(data);
   } catch (error) {
-    sendError(res, error);
+    sendError(res, error, "listRefereesHandler");
   }
 }
 
@@ -124,7 +228,7 @@ export async function createTournamentHandler(req, res) {
     const data = await createTournament({ req, input: req.body });
     res.status(201).json(data);
   } catch (error) {
-    sendError(res, error);
+    sendError(res, error, "createTournamentHandler");
   }
 }
 
@@ -137,7 +241,7 @@ export async function updateTournamentHandler(req, res) {
     });
     res.json(data);
   } catch (error) {
-    sendError(res, error);
+    sendError(res, error, "updateTournamentHandler");
   }
 }
 
@@ -146,7 +250,7 @@ export async function deleteTournamentHandler(req, res) {
     const data = await deleteTournament(parseTournamentId(req.params.tournamentId));
     res.json(data);
   } catch (error) {
-    sendError(res, error);
+    sendError(res, error, "deleteTournamentHandler");
   }
 }
 
@@ -155,7 +259,7 @@ export async function getTournamentOverviewHandler(req, res) {
     const data = await getTournamentOverview(parseTournamentId(req.params.tournamentId));
     res.json(data);
   } catch (error) {
-    sendError(res, error);
+    sendError(res, error, "getTournamentOverviewHandler");
   }
 }
 
@@ -166,7 +270,7 @@ export async function getPublicTournamentOverviewHandler(req, res) {
     );
     res.json(data);
   } catch (error) {
-    sendError(res, error);
+    sendError(res, error, "getPublicTournamentOverviewHandler");
   }
 }
 
@@ -177,7 +281,7 @@ export async function listPublicTournamentsHandler(req, res) {
     });
     res.json(data);
   } catch (error) {
-    sendError(res, error);
+    sendError(res, error, "listPublicTournamentsHandler");
   }
 }
 
@@ -188,7 +292,7 @@ export async function listPublicRegistrationOptionsHandler(req, res) {
       ...(await listRegistrationEventOptions(tournamentLookup))
     });
   } catch (error) {
-    sendError(res, error);
+    sendError(res, error, "listPublicRegistrationOptionsHandler");
   }
 }
 
@@ -200,7 +304,7 @@ export async function createPublicTournamentRegistrationHandler(req, res) {
     });
     res.status(201).json(data);
   } catch (error) {
-    sendError(res, error);
+    sendError(res, error, "createPublicTournamentRegistrationHandler");
   }
 }
 
@@ -212,7 +316,7 @@ export async function createPublicRegistrationPaymentOrderHandler(req, res) {
     });
     res.json(data);
   } catch (error) {
-    sendError(res, error);
+    sendError(res, error, "createPublicRegistrationPaymentOrderHandler");
   }
 }
 
@@ -225,7 +329,7 @@ export async function verifyPublicRegistrationPaymentHandler(req, res) {
     });
     res.json(data);
   } catch (error) {
-    sendError(res, error);
+    sendError(res, error, "verifyPublicRegistrationPaymentHandler");
   }
 }
 
@@ -234,7 +338,7 @@ export async function listCourtsHandler(req, res) {
     const data = await listCourts(parseTournamentId(req.params.tournamentId));
     res.json(data);
   } catch (error) {
-    sendError(res, error);
+    sendError(res, error, "listCourtsHandler");
   }
 }
 
@@ -246,7 +350,7 @@ export async function createEventHandler(req, res) {
     });
     res.status(201).json(data);
   } catch (error) {
-    sendError(res, error);
+    sendError(res, error, "createEventHandler");
   }
 }
 
@@ -258,7 +362,7 @@ export async function createCourtHandler(req, res) {
     });
     res.status(201).json(data);
   } catch (error) {
-    sendError(res, error);
+    sendError(res, error, "createCourtHandler");
   }
 }
 
@@ -271,7 +375,7 @@ export async function updateEventHandler(req, res) {
     });
     res.json(data);
   } catch (error) {
-    sendError(res, error);
+    sendError(res, error, "updateEventHandler");
   }
 }
 
@@ -282,7 +386,7 @@ export async function listRegistrationsHandler(req, res) {
     );
     res.json(data);
   } catch (error) {
-    sendError(res, error);
+    sendError(res, error, "listRegistrationsHandler");
   }
 }
 
@@ -295,7 +399,20 @@ export async function updateRegistrationHandler(req, res) {
     });
     res.json(data);
   } catch (error) {
-    sendError(res, error);
+    sendError(res, error, "updateRegistrationHandler");
+  }
+}
+
+export async function approveRegistrationParticipantHandler(req, res) {
+  try {
+    const data = await approveRegistrationToParticipant({
+      tournamentId: parseTournamentId(req.params.tournamentId),
+      registrationId: parseRegistrationId(req.params.registrationId),
+      input: req.body
+    });
+    res.json(data);
+  } catch (error) {
+    sendError(res, error, "approveRegistrationParticipantHandler");
   }
 }
 
@@ -308,7 +425,7 @@ export async function assignCourtRefereeHandler(req, res) {
     });
     res.json(data);
   } catch (error) {
-    sendError(res, error);
+    sendError(res, error, "assignCourtRefereeHandler");
   }
 }
 
@@ -320,7 +437,7 @@ export async function listParticipantsHandler(req, res) {
     );
     res.json(data);
   } catch (error) {
-    sendError(res, error);
+    sendError(res, error, "listParticipantsHandler");
   }
 }
 
@@ -334,7 +451,7 @@ export async function registerParticipantForTournamentEventHandler(req, res) {
 
     res.status(201).json(data);
   } catch (error) {
-    sendError(res, error);
+    sendError(res, error, "registerParticipantForTournamentEventHandler");
   }
 }
 
@@ -347,7 +464,7 @@ export async function registerParticipantByEventIdHandler(req, res) {
 
     res.status(201).json(data);
   } catch (error) {
-    sendError(res, error);
+    sendError(res, error, "registerParticipantByEventIdHandler");
   }
 }
 
@@ -363,7 +480,7 @@ export async function listReadyMatchesHandler(req, res) {
     const data = await listReadyMatches({ tournamentId, eventId });
     res.json(data);
   } catch (error) {
-    sendError(res, error);
+    sendError(res, error, "listReadyMatchesHandler");
   }
 }
 
@@ -391,7 +508,7 @@ export async function listMatchesHandler(req, res) {
     });
     res.json(data);
   } catch (error) {
-    sendError(res, error);
+    sendError(res, error, "listMatchesHandler");
   }
 }
 
@@ -419,7 +536,7 @@ export async function listPublicMatchesHandler(req, res) {
     });
     res.json(data);
   } catch (error) {
-    sendError(res, error);
+    sendError(res, error, "listPublicMatchesHandler");
   }
 }
 
@@ -432,7 +549,7 @@ export async function generateDrawHandler(req, res) {
     });
     res.json(data);
   } catch (error) {
-    sendError(res, error);
+    sendError(res, error, "generateDrawHandler");
   }
 }
 
@@ -453,7 +570,7 @@ export async function processByesHandler(req, res) {
 
     res.json(data);
   } catch (error) {
-    sendError(res, error);
+    sendError(res, error, "processByesHandler");
   }
 }
 
@@ -475,7 +592,7 @@ export async function runSchedulerHandler(req, res) {
 
     res.json(data);
   } catch (error) {
-    sendError(res, error);
+    sendError(res, error, "runSchedulerHandler");
   }
 }
 
@@ -493,7 +610,7 @@ export async function assignCourtHandler(req, res) {
     const data = await assignCourtToMatch({ matchId, courtId });
     res.json(data);
   } catch (error) {
-    sendError(res, error);
+    sendError(res, error, "assignCourtHandler");
   }
 }
 
@@ -502,7 +619,7 @@ export async function startMatchHandler(req, res) {
     const data = await startMatch(parseMatchId(req.params.matchId));
     res.json(data);
   } catch (error) {
-    sendError(res, error);
+    sendError(res, error, "startMatchHandler");
   }
 }
 
@@ -511,7 +628,7 @@ export async function getMatchSetsHandler(req, res) {
     const data = await getMatchScoringContext(parseMatchId(req.params.matchId));
     res.json(data);
   } catch (error) {
-    sendError(res, error);
+    sendError(res, error, "getMatchSetsHandler");
   }
 }
 
@@ -524,7 +641,7 @@ export async function updateMatchSetsHandler(req, res) {
     const data = await saveMatchSets(parseMatchId(req.params.matchId), req.body.sets);
     res.json(data);
   } catch (error) {
-    sendError(res, error);
+    sendError(res, error, "updateMatchSetsHandler");
   }
 }
 
@@ -539,7 +656,7 @@ export async function completeMatchHandler(req, res) {
 
     res.json(data);
   } catch (error) {
-    sendError(res, error);
+    sendError(res, error, "completeMatchHandler");
   }
 }
 
@@ -558,7 +675,7 @@ export async function getRefereeDashboardHandler(req, res) {
 
     res.json(data);
   } catch (error) {
-    sendError(res, error);
+    sendError(res, error, "getRefereeDashboardHandler");
   }
 }
 
@@ -570,7 +687,7 @@ export async function startRefereeMatchHandler(req, res) {
     });
     res.json(data);
   } catch (error) {
-    sendError(res, error);
+    sendError(res, error, "startRefereeMatchHandler");
   }
 }
 
@@ -582,7 +699,7 @@ export async function getRefereeMatchSetsHandler(req, res) {
     });
     res.json(data);
   } catch (error) {
-    sendError(res, error);
+    sendError(res, error, "getRefereeMatchSetsHandler");
   }
 }
 
@@ -599,7 +716,7 @@ export async function updateRefereeMatchSetsHandler(req, res) {
     });
     res.json(data);
   } catch (error) {
-    sendError(res, error);
+    sendError(res, error, "updateRefereeMatchSetsHandler");
   }
 }
 
@@ -615,7 +732,7 @@ export async function completeRefereeMatchHandler(req, res) {
 
     res.json(data);
   } catch (error) {
-    sendError(res, error);
+    sendError(res, error, "completeRefereeMatchHandler");
   }
 }
 
@@ -628,7 +745,7 @@ export async function claimRefereeCourtHandler(req, res) {
 
     res.json(data);
   } catch (error) {
-    sendError(res, error);
+    sendError(res, error, "claimRefereeCourtHandler");
   }
 }
 
@@ -641,6 +758,8 @@ export async function releaseRefereeCourtHandler(req, res) {
 
     res.json(data);
   } catch (error) {
-    sendError(res, error);
+    sendError(res, error, "releaseRefereeCourtHandler");
   }
 }
+
+

@@ -5,13 +5,15 @@ import {
   renderTournamentOperations,
   renderTournamentResults,
   renderTournamentScoring,
+  renderTournamentSetup,
   renderTournaments,
-  renderTournamentSetup
 } from "../../dashboard/js/modules/tournaments.js";
+import { renderTournamentStaff } from "../../dashboard/js/modules/tournamentStaff.js";
 
 const routes = {
   tournaments: renderTournaments,
   "tournament-setup": renderTournamentSetup,
+  "tournament-staff": renderTournamentStaff,
   "tournament-brackets": renderTournamentBrackets,
   "tournament-operations": renderTournamentOperations,
   "tournament-courts": renderTournamentCourts,
@@ -51,6 +53,16 @@ function isParentUser() {
   );
 }
 
+function isRefereeOnlyUser() {
+  const access = window.AGPortalAccess;
+
+  if (!access) {
+    return false;
+  }
+
+  return access.isRefereePreferredRole(getStoredRole());
+}
+
 function collapseSidebarForMobile() {
   if (window.innerWidth < 1100 && typeof window.closeSidebar === "function") {
     window.closeSidebar();
@@ -66,6 +78,11 @@ function setActiveNav(route) {
 function loadRoute() {
   if (isParentUser()) {
     window.location.replace("/Public/parent/index.html");
+    return;
+  }
+
+  if (isRefereeOnlyUser()) {
+    window.location.replace("/Public/tournament/referee.html");
     return;
   }
 

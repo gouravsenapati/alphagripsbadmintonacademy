@@ -5,41 +5,55 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>AlphaGrips Tournament Console</title>
     <link rel="stylesheet" href="../dashboard/css/dashboard.css" />
+    <script src="../shared/portalAccess.js"></script>
     <script>
       (function () {
-        const token = localStorage.getItem("token");
-        const isParentRole = function (roleValue) {
-          return String(roleValue || "").toLowerCase().startsWith("parent");
+        const access = window.AGPortalAccess;
+        const { token, role, roleId } = access.getStoredAuthMeta();
+        const canAccessAcademy = access.isAcademyPortalAllowedRole(role, roleId);
+        const canManageTournamentStaff = [
+          "super_admin",
+          "academy_admin",
+          "head_coach",
+          "tournament_admin",
+          "tournament_manager"
+        ].includes(String(role || "").toLowerCase());
+
+        window.__AGTournamentConsoleContext = {
+          canAccessAcademy,
+          canManageTournamentStaff
         };
-        const isParentRoleId = function (roleIdValue) {
-          return String(roleIdValue || "") === "4";
-        };
-        const decodeRoleFromToken = function (jwtToken) {
-          try {
-            const payload = jwtToken.split(".")[1];
-            const normalized = payload.replace(/-/g, "+").replace(/_/g, "/");
-            const decoded = JSON.parse(atob(normalized));
-            return {
-              role: String(decoded.role || decoded.role_name || "").toLowerCase(),
-              roleId: String(decoded.role_id || "")
-            };
-          } catch (error) {
-            return { role: "", roleId: "" };
-          }
-        };
-        const tokenMeta = decodeRoleFromToken(token || "");
-        const role = tokenMeta.role || String(localStorage.getItem("role") || "").toLowerCase();
-        const roleId = tokenMeta.roleId || String(localStorage.getItem("role_id") || "");
 
         if (!token) {
-          window.location.replace("/Public/login.html");
+          window.location.replace("/Public/login.html?portal=tournament&redirect=/Public/tournament/index.html#tournaments");
           return;
         }
 
-        if (isParentRole(role) || isParentRoleId(roleId)) {
-          window.location.replace("/Public/parent/index.html");
+        const preferredPortal = access.getPreferredPortal(role, roleId);
+
+        if (preferredPortal === "parent") {
+          window.location.replace(access.getPortalUrl(preferredPortal));
+          return;
+        }
+
+        if (preferredPortal === "referee") {
+          window.location.replace(access.getPortalUrl(preferredPortal));
         }
       })();
+
+      document.addEventListener("DOMContentLoaded", function () {
+        const context = window.__AGTournamentConsoleContext || {};
+        const mainDashboardLink = document.getElementById("mainDashboardLink");
+        const tournamentStaffNavLink = document.getElementById("tournamentStaffNavLink");
+
+        if (!context.canAccessAcademy && mainDashboardLink) {
+          mainDashboardLink.remove();
+        }
+
+        if (!context.canManageTournamentStaff && tournamentStaffNavLink) {
+          tournamentStaffNavLink.remove();
+        }
+      });
     </script>
   </head>
   <body>
@@ -55,7 +69,13 @@
           </div>
         </div>
         <div class="topbar-right">
-          <a class="btn btn-ghost" href="/Public/dashboard/index.html#dashboard">Main Dashboard</a>
+          <a
+            class="btn btn-ghost"
+            id="mainDashboardLink"
+            href="/Public/dashboard/index.html#players"
+          >
+            Main Dashboard
+          </a>
           <button onclick="logout()" class="btn btn-ghost">Logout</button>
         </div>
       </header>
@@ -68,7 +88,14 @@
         <nav>
           <a href="#tournaments" data-route="tournaments">Tournament Overview</a>
           <a href="#tournament-setup" data-route="tournament-setup">Tournament Setup</a>
-          <a href="#tournament-brackets" data-route="tournament-brackets">Brackets</a>
+          <a
+            href="#tournament-staff"
+            data-route="tournament-staff"
+            id="tournamentStaffNavLink"
+          >
+            Tournament Staff
+          </a>
+          <a href="#tournament-brackets" data-route="tournament-brackets">Draws</a>
           <a href="#tournament-operations" data-route="tournament-operations">Operations Desk</a>
           <a href="#tournament-courts" data-route="tournament-courts">Court Monitor</a>
           <a href="#tournament-scoring" data-route="tournament-scoring">Live Scoring</a>

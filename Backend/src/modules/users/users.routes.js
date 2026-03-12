@@ -6,6 +6,7 @@ import { auth } from "../../middleware/auth.middleware.js";
 const router = express.Router();
 
 const USER_MANAGER_ROLES = new Set(["super_admin", "head_coach", "academy_admin"]);
+const EXCLUDED_USER_MANAGER_ROLE_NAMES = new Set(["parent", "parents"]);
 const PASSWORD_SALT_ROUNDS = 10;
 
 function normalizeText(value) {
@@ -64,6 +65,14 @@ function normalizeBoolean(value, fallback = null) {
 
 function getRoleName(req) {
   return req.user?.role || req.user?.role_name || null;
+}
+
+function normalizeRoleName(value) {
+  return String(normalizeText(value) || "").toLowerCase();
+}
+
+function isExcludedUserManagerRole(roleName) {
+  return EXCLUDED_USER_MANAGER_ROLE_NAMES.has(normalizeRoleName(roleName));
 }
 
 function canManageUsers(req) {
@@ -252,6 +261,14 @@ function validateManagedRole(roleName, req) {
     throw error;
   }
 
+  if (isExcludedUserManagerRole(normalizedRoleName)) {
+    const error = new Error(
+      "Parent accounts are created from player registration and cannot be managed from Staff"
+    );
+    error.statusCode = 400;
+    throw error;
+  }
+
   if (getRoleName(req) !== "super_admin" && normalizedRoleName === "super_admin") {
     const error = new Error("Only super admin can assign the super_admin role");
     error.statusCode = 403;
@@ -291,10 +308,19 @@ router.get("/meta", auth, async (req, res) => {
       })
     ]);
 
-    const filteredRoles =
-      roleName === "super_admin"
-        ? roles
-        : roles.filter((role) => String(role.name || "").toLowerCase() !== "super_admin");
+    const filteredRoles = roles.filter((role) => {
+      const normalizedRoleName = normalizeRoleName(role.name);
+
+      if (isExcludedUserManagerRole(normalizedRoleName)) {
+        return false;
+      }
+
+      if (roleName !== "super_admin" && normalizedRoleName === "super_admin") {
+        return false;
+      }
+
+      return true;
+    });
 
     res.json({
       roles: filteredRoles,
@@ -353,7 +379,11 @@ router.get("/", auth, async (req, res) => {
       (roleRows.data || []).map((role) => [String(role.id), role.name])
     );
 
-    res.json((users || []).map((user) => buildUserResponse(user, roleNameMap, academyNameMap)));
+    res.json(
+      (users || [])
+        .map((user) => buildUserResponse(user, roleNameMap, academyNameMap))
+        .filter((user) => !isExcludedUserManagerRole(user.role_name))
+    );
   } catch (error) {
     res.status(error.statusCode || 500).json({ error: error.message });
   }

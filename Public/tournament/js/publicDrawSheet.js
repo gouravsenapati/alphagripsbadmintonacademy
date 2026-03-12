@@ -43,10 +43,18 @@ function formatDateRange(startDate, endDate) {
 
 function getQueryParams() {
   const params = new URLSearchParams(window.location.search);
+  const storedTournamentLookup =
+    (typeof localStorage !== "undefined" &&
+      (localStorage.getItem("ag_public_tournament_lookup") ||
+        localStorage.getItem("ag_selected_tournament_id"))) ||
+    "";
+  const storedEventId =
+    (typeof localStorage !== "undefined" && localStorage.getItem("ag_public_draw_event_id")) || "";
 
   return {
-    tournamentLookup: params.get("tournament") || "",
-    eventId: params.get("eventId") || ""
+    tournamentLookup:
+      params.get("tournament") || params.get("tournamentId") || storedTournamentLookup || "",
+    eventId: params.get("eventId") || storedEventId || ""
   };
 }
 
@@ -62,6 +70,16 @@ function updateQuery(params) {
   });
 
   window.history.replaceState({}, "", url);
+
+  if (typeof localStorage !== "undefined") {
+    if (params.tournament) {
+      localStorage.setItem("ag_public_tournament_lookup", params.tournament);
+    }
+
+    if (params.eventId) {
+      localStorage.setItem("ag_public_draw_event_id", params.eventId);
+    }
+  }
 }
 
 function groupMatchesByRound(matches) {

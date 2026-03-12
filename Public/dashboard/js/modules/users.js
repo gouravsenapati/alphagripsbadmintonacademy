@@ -2,6 +2,31 @@ import { api } from "../services/api.js";
 import { bindDebouncedSearch } from "../utils/search.js";
 
 const USER_MANAGER_ROLES = new Set(["super_admin", "head_coach", "academy_admin"]);
+const EXCLUDED_USER_MANAGER_ROLE_NAMES = new Set(["parent", "parents"]);
+const ROLE_LABELS = {
+  super_admin: "Super Admin",
+  academy_admin: "Academy Admin",
+  head_coach: "Head Coach",
+  coach: "Coach",
+  tournament_admin: "Tournament Admin",
+  tournament_manager: "Tournament Manager",
+  tournament_staff: "Tournament Staff",
+  referee: "Referee",
+  tournament_referee: "Tournament Referee",
+  court_official: "Court Official"
+};
+const ROLE_SORT_ORDER = [
+  "super_admin",
+  "academy_admin",
+  "head_coach",
+  "coach",
+  "tournament_admin",
+  "tournament_manager",
+  "tournament_staff",
+  "referee",
+  "tournament_referee",
+  "court_official"
+];
 
 const state = {
   users: [],
@@ -49,6 +74,53 @@ function hasText(value) {
   return value !== null && value !== undefined && String(value).trim() !== "";
 }
 
+function normalizeRoleName(value) {
+  return String(value || "")
+    .trim()
+    .toLowerCase();
+}
+
+function isExcludedUserManagerRole(value) {
+  return EXCLUDED_USER_MANAGER_ROLE_NAMES.has(normalizeRoleName(value));
+}
+
+function formatRoleLabel(value) {
+  const normalizedValue = normalizeRoleName(value);
+
+  if (!normalizedValue) {
+    return "-";
+  }
+
+  if (ROLE_LABELS[normalizedValue]) {
+    return ROLE_LABELS[normalizedValue];
+  }
+
+  return normalizedValue
+    .split("_")
+    .filter(Boolean)
+    .map((token) => token.charAt(0).toUpperCase() + token.slice(1))
+    .join(" ");
+}
+
+function getRoleSortIndex(value) {
+  const normalizedValue = normalizeRoleName(value);
+  const index = ROLE_SORT_ORDER.indexOf(normalizedValue);
+  return index === -1 ? ROLE_SORT_ORDER.length : index;
+}
+
+function compareRoleRows(left, right) {
+  const leftIndex = getRoleSortIndex(left?.name);
+  const rightIndex = getRoleSortIndex(right?.name);
+
+  if (leftIndex !== rightIndex) {
+    return leftIndex - rightIndex;
+  }
+
+  return formatRoleLabel(left?.name).localeCompare(formatRoleLabel(right?.name), "en", {
+    sensitivity: "base"
+  });
+}
+
 function clearNotice() {
   state.notice = null;
 }
@@ -58,7 +130,10 @@ function setNotice(message, tone = "info") {
 }
 
 function getRoleOptions() {
-  return Array.isArray(state.meta.roles) ? state.meta.roles : [];
+  return (Array.isArray(state.meta.roles) ? state.meta.roles : [])
+    .filter((role) => !isExcludedUserManagerRole(role?.name))
+    .slice()
+    .sort(compareRoleRows);
 }
 
 function getAcademyOptions() {
@@ -158,6 +233,7 @@ function getFilteredUsers() {
         user.email,
         user.phone,
         user.role_name,
+        formatRoleLabel(user.role_name),
         user.academy_name
       ]
         .filter(hasText)
@@ -255,7 +331,7 @@ function renderRoleOptions(selectedValue = "") {
           <option value="${role.id}" ${
             String(selectedValue) === String(role.id) ? "selected" : ""
           }>
-            ${escapeHtml(role.name)}
+            ${escapeHtml(formatRoleLabel(role.name))}
           </option>
         `
       )
@@ -466,7 +542,7 @@ function renderTable() {
       <div class="empty-panel compact">
         <p class="eyebrow">Staff Directory</p>
         <h3>No users found</h3>
-        <p>Create a coach, head coach, academy admin, or other staff account to get started.</p>
+        <p>Create a coach, academy admin, referee, or other staff account to get started.</p>
       </div>
     `;
   }
@@ -497,7 +573,9 @@ function renderTable() {
                     </div>
                   </td>
                   <td>
-                    <span class="staff-role-badge">${escapeHtml(user.role_name || "-")}</span>
+                    <span class="staff-role-badge">${escapeHtml(
+                      formatRoleLabel(user.role_name)
+                    )}</span>
                   </td>
                   <td>${escapeHtml(user.academy_name || "All academies")}</td>
                   <td>
@@ -578,7 +656,7 @@ function renderUsersPage() {
         <p class="eyebrow">Staff Administration</p>
         <h2>Users & Staff</h2>
         <p class="hero-copy">
-          Create and maintain coach, head coach, academy admin, and support-staff logins inside the correct academy scope.
+          Create and maintain academy and tournament staff logins inside the correct academy scope.
         </p>
       </div>
     </section>
@@ -607,7 +685,7 @@ function renderUsersPage() {
                   <option value="${role.id}" ${
                     String(state.filters.role) === String(role.id) ? "selected" : ""
                   }>
-                    ${escapeHtml(role.name)}
+                    ${escapeHtml(formatRoleLabel(role.name))}
                   </option>
                 `
               )
