@@ -182,6 +182,27 @@ function appendRegistrationNote(existingNotes, line) {
   return [normalizeText(existingNotes), normalizeText(line)].filter(Boolean).join("\n");
 }
 
+function appendUniqueRegistrationNote(existingNotes, line) {
+  const normalizedExisting = normalizeText(existingNotes) || "";
+  const normalizedLine = normalizeText(line);
+
+  if (!normalizedLine) {
+    return normalizedExisting;
+  }
+
+  if (
+    normalizedExisting
+      .toLowerCase()
+      .split("\n")
+      .map((entry) => entry.trim())
+      .includes(normalizedLine.toLowerCase())
+  ) {
+    return normalizedExisting;
+  }
+
+  return [normalizedExisting, normalizedLine].filter(Boolean).join("\n");
+}
+
 function extractRegistrationEmail(notes) {
   const normalizedNotes = normalizeText(notes) || "";
   const match = normalizedNotes.match(/Contact email:\s*(.+)/i);
@@ -431,6 +452,80 @@ async function getRegistrationWithEntry({ tournamentId, registrationId }) {
   return { registration, entry };
 }
 
+async function syncRegistrationEntryToParticipant({
+  tournamentId,
+  registration,
+  entry,
+  event
+}) {
+  if (!entry) {
+    throw new AppError("Registration entry not found", 404);
+  }
+
+  const { data: existingParticipants, error: participantsError } = await tournamentDb
+    .from("participants")
+    .select("*")
+    .eq("tournament_id", tournamentId)
+    .eq("event_id", event.id);
+
+  if (participantsError) {
+    throw new AppError(participantsError.message, 500);
+  }
+
+  let participant = findExistingRegistrationParticipantRecord({
+    participants: existingParticipants || [],
+    registration,
+    entry
+  });
+  let participantCreated = false;
+
+  if (!participant) {
+    participant = await registerParticipantForEvent({
+      tournamentId,
+      eventId: event.id,
+      input: {
+        player1_name: registration.player_name,
+        player2_name:
+          normalizeText(entry.entry_type)?.toLowerCase() === "doubles"
+            ? entry.partner_name
+            : null,
+        status: "active",
+        metadata: {
+          source: "public_registration",
+          registration_id: registration.id,
+          registration_entry_id: entry.id
+        }
+      }
+    });
+    participantCreated = true;
+  }
+
+  const { data: updatedEntry, error: entryUpdateError } = await tournamentDb
+    .from("registration_entries")
+    .update({
+      status: "approved"
+    })
+    .eq("id", entry.id)
+    .eq("registration_id", registration.id)
+    .select("*")
+    .single();
+
+  if (entryUpdateError) {
+    throw new AppError(entryUpdateError.message, 500);
+  }
+
+  const [enrichedParticipant] = await enrichParticipantsWithDisplayNames([participant]);
+
+  return {
+    participant: enrichedParticipant || participant,
+    participantCreated,
+    updatedEntry: {
+      ...updatedEntry,
+      event_id: event.id
+    }
+  };
+}
+
 export async function listRegistrationEventOptions(tournamentLookup) {
   const tournament = await ensureTournamentByLookup(tournamentLookup);
   const events = await listRegistrationEnabledEvents(tournament.id);
@@ -616,7 +711,7 @@ export async function createRegistrationPaymentOrder({
   const payableAmount = event.registration.payable_amount;
 
   if (payableAmount <= 0) {
-    const updatedNotes = appendRegistrationNote(
+    let updatedNotes = appendRegistrationNote(
       registration.notes,
       "Online payment skipped because payable amount is zero."
     );
@@ -636,7 +731,45 @@ export async function createRegistrationPaymentOrder({
       throw new AppError(updateError.message, 500);
     }
 
-    const updatedResponse = toRegistrationResponse(updatedRegistration, entry);
+    const participantSync = await syncRegistrationEntryToParticipant({
+      tournamentId: tournament.id,
+      registration: updatedRegistration,
+      entry,
+      event
+    });
+
+    updatedNotes = appendUniqueRegistrationNote(
+      updatedRegistration.notes,
+      participantSync.participantCreated
+        ? `Online payment auto-added to participants: ${participantSync.participant.id}`
+        : `Online payment matched existing participant: ${participantSync.participant.id}`
+    );
+
+    let finalRegistration = updatedRegistration;
+
+    if (updatedNotes !== (updatedRegistration.notes || "")) {
+      const { data: notedRegistration, error: notesUpdateError } = await tournamentDb
+        .from("registrations")
+        .update({
+          notes: updatedNotes,
+          updated_at: new Date().toISOString()
+        })
+        .eq("id", registrationId)
+        .select("*")
+        .single();
+
+      if (notesUpdateError) {
+        throw new AppError(notesUpdateError.message, 500);
+      }
+
+      finalRegistration = notedRegistration;
+    }
+
+    const updatedResponse = toRegistrationResponse(
+      finalRegistration,
+      participantSync.updatedEntry,
+      participantSync.participant
+    );
     const emailAddress = updatedResponse.email;
     let emailDelivery = { sent: false, reason: "missing_email" };
 
@@ -756,16 +889,55 @@ export async function verifyRegistrationPayment({
   if (updateError) {
     throw new AppError(updateError.message, 500);
   }
-  const updatedResponse = toRegistrationResponse(updatedRegistration, entry);
+
+  const event = await getRegistrationEventForEntry({
+    tournamentId: tournament.id,
+    entry
+  });
+
+  const participantSync = await syncRegistrationEntryToParticipant({
+    tournamentId: tournament.id,
+    registration: updatedRegistration,
+    entry,
+    event
+  });
+
+  const participantNote = appendUniqueRegistrationNote(
+    updatedRegistration.notes,
+    participantSync.participantCreated
+      ? `Online payment auto-added to participants: ${participantSync.participant.id}`
+      : `Online payment matched existing participant: ${participantSync.participant.id}`
+  );
+
+  let finalRegistration = updatedRegistration;
+
+  if (participantNote !== (updatedRegistration.notes || "")) {
+    const { data: notedRegistration, error: notesUpdateError } = await tournamentDb
+      .from("registrations")
+      .update({
+        notes: participantNote,
+        updated_at: new Date().toISOString()
+      })
+      .eq("id", registrationId)
+      .select("*")
+      .single();
+
+    if (notesUpdateError) {
+      throw new AppError(notesUpdateError.message, 500);
+    }
+
+    finalRegistration = notedRegistration;
+  }
+
+  const updatedResponse = toRegistrationResponse(
+    finalRegistration,
+    participantSync.updatedEntry,
+    participantSync.participant
+  );
   const emailAddress = updatedResponse.email;
   let emailDelivery = { sent: false, reason: "missing_email" };
 
   if (emailAddress) {
-    const event = await getRegistrationEventForEntry({
-      tournamentId: tournament.id,
-      entry
-    });
-
     emailDelivery = await sendPaymentConfirmedEmail({
       to: emailAddress,
       tournament,
@@ -1019,43 +1191,14 @@ export async function approveRegistrationToParticipant({
     entry
   });
 
-  const { data: existingParticipants, error: participantsError } = await tournamentDb
-    .from("participants")
-    .select("*")
-    .eq("tournament_id", tournamentId)
-    .eq("event_id", event.id);
-
-  if (participantsError) {
-    throw new AppError(participantsError.message, 500);
-  }
-
-  let participant = findExistingRegistrationParticipantRecord({
-    participants: existingParticipants || [],
+  const participantSync = await syncRegistrationEntryToParticipant({
+    tournamentId,
     registration,
-    entry
+    entry,
+    event
   });
-  let participantCreated = false;
-
-  if (!participant) {
-    participant = await registerParticipantForEvent({
-      tournamentId,
-      eventId: event.id,
-      input: {
-        player1_name: registration.player_name,
-        player2_name:
-          normalizeText(entry.entry_type)?.toLowerCase() === "doubles"
-            ? entry.partner_name
-            : null,
-        status: "active",
-        metadata: {
-          source: "public_registration",
-          registration_id: registration.id,
-          registration_entry_id: entry.id
-        }
-      }
-    });
-    participantCreated = true;
-  }
+  const participant = participantSync.participant;
+  const participantCreated = participantSync.participantCreated;
 
   const updatedNotes = appendRegistrationNote(
     normalizeText(input.notes) ?? registration.notes,
@@ -1079,28 +1222,10 @@ export async function approveRegistrationToParticipant({
     throw new AppError(registrationUpdateError.message, 500);
   }
 
-  const { data: updatedEntry, error: entryUpdateError } = await tournamentDb
-    .from("registration_entries")
-    .update({
-      status: "approved"
-    })
-    .eq("id", entry.id)
-    .eq("registration_id", registrationId)
-    .select("*")
-    .single();
-
-  if (entryUpdateError) {
-    throw new AppError(entryUpdateError.message, 500);
-  }
-
-  const [enrichedParticipant] = await enrichParticipantsWithDisplayNames([participant]);
   const response = toRegistrationResponse(
     updatedRegistration,
-    {
-      ...updatedEntry,
-      event_id: event.id
-    },
-    enrichedParticipant || participant
+    participantSync.updatedEntry,
+    participant
   );
   const emailAddress = response.email;
   let emailDelivery = null;
