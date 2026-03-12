@@ -303,7 +303,7 @@ function renderSetupRequired() {
       <h3>Run the tournament staff assignment SQL once</h3>
       <p>${escapeHtml(
         state.setupRequiredMessage ||
-          "Run Backend/sql/20260312_public_tournament_user_assignments.sql in Supabase, then refresh this page."
+          "Run Backend/sql/20260312_ag_tournament_user_assignments.sql in Supabase so ag_tournament.tournament_user_assignments exists, then refresh this page."
       )}</p>
     </div>
   `;

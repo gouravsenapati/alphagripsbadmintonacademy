@@ -50,11 +50,11 @@ button {
 .topbar {
   position: fixed;
   inset: 0 0 auto 0;
-  height: 72px;
+  height: 64px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 18px;
+  padding: 0 14px;
   background: linear-gradient(90deg, rgba(23, 34, 74, 0.96), rgba(38, 56, 110, 0.92));
   color: #f7f4ef;
   backdrop-filter: blur(14px);
@@ -65,7 +65,7 @@ button {
 .topbar-right {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 10px;
 }
 
 .topbar-right .btn,
@@ -89,13 +89,13 @@ button {
 
 .topbar h1 {
   margin: 0;
-  font-size: 1.1rem;
+  font-size: 1rem;
 }
 
 .brand-kicker,
 .eyebrow {
   margin: 0 0 4px;
-  font-size: 0.72rem;
+  font-size: 0.68rem;
   letter-spacing: 0.14em;
   text-transform: uppercase;
   color: var(--muted);
@@ -106,8 +106,8 @@ button {
 }
 
 .menu-btn {
-  width: 42px;
-  height: 42px;
+  width: 38px;
+  height: 38px;
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.08);
   color: inherit;
@@ -116,11 +116,11 @@ button {
 
 .sidebar {
   position: fixed;
-  top: 72px;
-  left: -280px;
-  width: 260px;
-  height: calc(100vh - 72px);
-  padding: 22px 16px;
+  top: 64px;
+  left: -256px;
+  width: 236px;
+  height: calc(100vh - 64px);
+  padding: 18px 14px;
   background: linear-gradient(180deg, rgba(23, 34, 74, 0.98), rgba(30, 44, 89, 0.98));
   color: #f4efe7;
   transition: left 0.25s ease;
@@ -135,21 +135,21 @@ button {
 }
 
 .sidebar-brand {
-  padding: 8px 10px 18px;
+  padding: 6px 8px 14px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  margin-bottom: 16px;
+  margin-bottom: 12px;
 }
 
 .sidebar nav {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 4px;
 }
 
 .sidebar nav a {
   display: block;
-  padding: 12px 14px;
-  border-radius: 14px;
+  padding: 10px 12px;
+  border-radius: 12px;
   color: inherit;
   text-decoration: none;
   transition: background 0.2s ease, transform 0.2s ease;
@@ -162,7 +162,7 @@ button {
 }
 
 #app {
-  padding: 96px 16px 24px;
+  padding: 84px 14px 22px;
   min-width: 0;
 }
 
@@ -182,8 +182,8 @@ button {
 .page-header,
 .tournament-hero,
 .hero-panel {
-  padding: 22px;
-  margin-bottom: 18px;
+  padding: 18px;
+  margin-bottom: 16px;
 }
 
 .hero-copy,
@@ -202,7 +202,7 @@ button {
 .event-actions,
 .table-actions {
   display: flex;
-  gap: 10px;
+  gap: 8px;
   flex-wrap: wrap;
 }
 
@@ -235,9 +235,9 @@ button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 6px 10px;
+  padding: 5px 9px;
   border-radius: 999px;
-  font-size: 0.78rem;
+  font-size: 0.74rem;
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -295,8 +295,8 @@ button {
 
 .summary-strip div {
   min-width: 140px;
-  padding: 14px 16px;
-  border-radius: 16px;
+  padding: 12px 14px;
+  border-radius: 14px;
   background: rgba(255, 253, 248, 0.88);
   border: 1px solid rgba(220, 205, 185, 0.8);
   box-shadow: var(--shadow);
@@ -313,7 +313,7 @@ button {
 .summary-strip strong {
   display: block;
   margin-top: 6px;
-  font-size: 1.6rem;
+  font-size: 1.4rem;
 }
 
 .bracket-board {
@@ -599,7 +599,7 @@ button {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  padding: 11px 16px;
+  padding: 9px 14px;
   border-radius: 999px;
   cursor: pointer;
   transition: transform 0.18s ease, opacity 0.18s ease, background 0.18s ease;
@@ -630,13 +630,13 @@ button {
 }
 
 .btn-sm {
-  padding: 8px 12px;
-  font-size: 0.9rem;
+  padding: 7px 11px;
+  font-size: 0.86rem;
 }
 
 .workspace-shell {
   display: grid;
-  gap: 18px;
+  gap: 14px;
 }
 
 .player-workspace-grid {
@@ -1192,14 +1192,14 @@ button {
 
 .sidebar-panel,
 .panel {
-  padding: 18px;
+  padding: 16px;
 }
 
 .panel-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
+  gap: 12px;
   margin-bottom: 14px;
 }
 
@@ -1260,13 +1260,13 @@ button {
 .stat-card,
 .event-card,
 .court-card {
-  padding: 18px;
+  padding: 16px;
 }
 
 .stat-card strong {
   display: block;
   margin: 6px 0;
-  font-size: 1.8rem;
+  font-size: 1.55rem;
 }
 
 .event-card-head {
@@ -1774,7 +1774,7 @@ input,
 select,
 textarea {
   width: 100%;
-  padding: 11px 12px;
+  padding: 10px 11px;
   border: 1px solid var(--line);
   border-radius: 14px;
   background: white;
@@ -1861,7 +1861,7 @@ textarea {
 
 @media (min-width: 768px) {
   #app {
-    padding: 104px 22px 28px;
+    padding: 92px 18px 24px;
   }
 
   .card-grid {
@@ -1905,28 +1905,28 @@ textarea {
   }
 
   #app {
-    margin-left: 260px;
-    padding: 96px 28px 32px;
-    width: calc(100% - 260px);
+    margin-left: 236px;
+    padding: 84px 22px 26px;
+    width: calc(100% - 236px);
   }
 
   .workspace-shell {
-    grid-template-columns: 320px minmax(0, 1fr);
+    grid-template-columns: 296px minmax(0, 1fr);
     align-items: start;
   }
 
   .player-workspace-grid {
-      grid-template-columns: minmax(340px, 420px) minmax(0, 1fr);
+      grid-template-columns: minmax(320px, 396px) minmax(0, 1fr);
       align-items: start;
     }
 
     .staff-workspace-grid {
-      grid-template-columns: minmax(360px, 460px) minmax(0, 1fr);
+      grid-template-columns: minmax(332px, 424px) minmax(0, 1fr);
       align-items: start;
     }
 
     .academy-attendance-grid {
-      grid-template-columns: minmax(340px, 420px) minmax(0, 1fr);
+      grid-template-columns: minmax(320px, 396px) minmax(0, 1fr);
       align-items: start;
     }
 
@@ -1941,17 +1941,17 @@ textarea {
 
   .player-form-panel {
     position: sticky;
-    top: 96px;
+    top: 84px;
   }
 
   .staff-form-panel {
     position: sticky;
-    top: 96px;
+    top: 84px;
   }
 
   .sidebar-panel {
     position: sticky;
-    top: 96px;
+    top: 84px;
   }
 
   .card-grid {

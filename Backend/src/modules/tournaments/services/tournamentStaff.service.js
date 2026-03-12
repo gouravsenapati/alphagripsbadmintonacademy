@@ -1,5 +1,7 @@
 import bcrypt from "bcryptjs";
 import supabase from "../../../config/db.js";
+import { env } from "../../../config/env.js";
+import { normalizeTournamentSchemaError } from "../../../config/tournamentSchema.js";
 import { AppError, normalizeBoolean, normalizeText } from "../utils/tournament.utils.js";
 import { ensureTournamentExists } from "./tournamentLookup.service.js";
 
@@ -20,6 +22,10 @@ const TOURNAMENT_ONLY_ROLE_NAMES = new Set([
   "court_official"
 ]);
 const TOURNAMENT_USER_ASSIGNMENTS_TABLE = "tournament_user_assignments";
+
+function getTournamentSchemaClient() {
+  return supabase.schema(env.TOURNAMENT_SCHEMA);
+}
 
 function getRoleName(req) {
   return normalizeText(req.user?.role || req.user?.role_name)?.toLowerCase() || null;
@@ -60,9 +66,15 @@ function isMissingTournamentStaffAssignmentsTable(error) {
 }
 
 function throwTournamentStaffAssignmentsError(error) {
+  const normalizedError = normalizeTournamentSchemaError(error);
+
+  if (normalizedError !== error) {
+    throw normalizedError;
+  }
+
   if (isMissingTournamentStaffAssignmentsTable(error)) {
     throw new AppError(
-      "Tournament staff assignment table is missing. Run Backend/sql/20260312_public_tournament_user_assignments.sql and retry",
+      `Tournament staff assignment table is missing in ${env.TOURNAMENT_SCHEMA}. Run Backend/sql/20260312_ag_tournament_user_assignments.sql and retry`,
       503
     );
   }
@@ -98,7 +110,7 @@ async function ensureManagedTournamentContext(req, tournamentId) {
 }
 
 async function listTournamentUserAssignments({ tournamentId, academyId = null, userId = null } = {}) {
-  let query = supabase
+  let query = getTournamentSchemaClient()
     .from(TOURNAMENT_USER_ASSIGNMENTS_TABLE)
     .select("id,tournament_id,academy_id,user_id,created_by,created_at")
     .eq("tournament_id", tournamentId);
@@ -127,6 +139,7 @@ async function createTournamentUserAssignment({
   createdBy = null
 }) {
   const { data, error } = await supabase
+    .schema(env.TOURNAMENT_SCHEMA)
     .from(TOURNAMENT_USER_ASSIGNMENTS_TABLE)
     .insert({
       tournament_id: tournamentId,
@@ -161,7 +174,7 @@ async function ensureTournamentUserAssignment({ tournamentId, academyId, userId 
 }
 
 async function deleteTournamentUserAssignment({ tournamentId, academyId, userId }) {
-  let query = supabase
+  let query = getTournamentSchemaClient()
     .from(TOURNAMENT_USER_ASSIGNMENTS_TABLE)
     .delete()
     .eq("tournament_id", tournamentId)
@@ -179,7 +192,7 @@ async function deleteTournamentUserAssignment({ tournamentId, academyId, userId 
 }
 
 async function countTournamentUserAssignmentsForUser(userId) {
-  const { count, error } = await supabase
+  const { count, error } = await getTournamentSchemaClient()
     .from(TOURNAMENT_USER_ASSIGNMENTS_TABLE)
     .select("id", { count: "exact", head: true })
     .eq("user_id", userId);
