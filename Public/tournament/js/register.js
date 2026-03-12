@@ -21,6 +21,7 @@ const state = {
   loading: true,
   submitting: false,
   paymentProcessing: false,
+  paymentProcessingStep: "",
   error: "",
   success: null
 };
@@ -105,6 +106,25 @@ function getPaymentMethodLabel(value) {
 }
 
 function renderStatus() {
+  if (state.paymentProcessing) {
+    const isVerifying = state.paymentProcessingStep === "verifying";
+
+    return `
+      <div class="registration-status processing">
+        <strong>${escapeHtml(
+          isVerifying ? "Payment verification in progress" : "Preparing secure payment"
+        )}</strong>
+        <span>
+          ${escapeHtml(
+            isVerifying
+              ? "Please wait while we confirm your Razorpay payment and finalize the registration. Do not refresh or close this page."
+              : "Please wait while Razorpay checkout opens. Do not refresh this page."
+          )}
+        </span>
+      </div>
+    `;
+  }
+
   if (state.error) {
     return `<div class="registration-status error">${escapeHtml(state.error)}</div>`;
   }
@@ -548,7 +568,9 @@ function renderForm() {
               state.submitting || state.paymentProcessing ? "disabled" : ""
             }>
               ${
-                state.paymentProcessing
+                state.paymentProcessingStep === "verifying"
+                  ? "Verifying Payment..."
+                  : state.paymentProcessing
                   ? "Opening Razorpay..."
                   : state.submitting
                     ? "Submitting..."
@@ -683,6 +705,8 @@ function bindEvents() {
     }
 
     state.submitting = true;
+    state.paymentProcessing = false;
+    state.paymentProcessingStep = "";
     state.error = "";
     state.success = null;
     render();
@@ -701,6 +725,7 @@ function bindEvents() {
 
       if (state.form.payment_method === "online") {
         state.paymentProcessing = true;
+        state.paymentProcessingStep = "opening";
         render();
 
         const order = await publicTournamentApi.createRegistrationPaymentOrder(
@@ -739,6 +764,7 @@ function bindEvents() {
     } finally {
       state.submitting = false;
       state.paymentProcessing = false;
+      state.paymentProcessingStep = "";
       render();
     }
   });
@@ -768,6 +794,11 @@ async function openRazorpayCheckout(registrationResponse, order) {
       },
       handler: async (paymentResponse) => {
         try {
+          state.paymentProcessing = true;
+          state.paymentProcessingStep = "verifying";
+          state.error = "";
+          render();
+
           const verification = await publicTournamentApi.verifyRegistrationPayment(
             state.tournamentLookup,
             registrationResponse.registration.id,
