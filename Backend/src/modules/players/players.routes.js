@@ -356,56 +356,38 @@ function buildPlayerPayload(body, req, { isUpdate = false } = {}) {
 
 async function ensureDuplicateFree({
   academyId,
-  email,
-  contactNumber1,
+  name,
+  dob,
   excludePlayerId = null
 }) {
-  if (email) {
-    const { data, error } = await supabase
-      .from("players")
-      .select("id,name,email")
-      .eq("academy_id", academyId)
-      .eq("email", email)
-      .limit(1);
-
-    if (error) {
-      throw error;
-    }
-
-    const duplicate = (data || []).find(
-      (player) => String(player.id) !== String(excludePlayerId || "")
-    );
-
-    if (duplicate) {
-      const duplicateError = new Error("A player with this email already exists");
-      duplicateError.statusCode = 409;
-      throw duplicateError;
-    }
+  if (!academyId || !name || !dob) {
+    return;
   }
 
-  if (contactNumber1) {
-    const { data, error } = await supabase
-      .from("players")
-      .select("id,name,contact_number_1")
-      .eq("academy_id", academyId)
-      .eq("contact_number_1", contactNumber1)
-      .limit(1);
+  const normalizedName = String(name).trim().toLowerCase();
 
-    if (error) {
-      throw error;
-    }
+  const { data, error } = await supabase
+    .from("players")
+    .select("id,name,dob")
+    .eq("academy_id", academyId)
+    .eq("dob", dob);
 
-    const duplicate = (data || []).find(
-      (player) => String(player.id) !== String(excludePlayerId || "")
+  if (error) {
+    throw error;
+  }
+
+  const duplicate = (data || []).find(
+    (player) =>
+      String(player.id) !== String(excludePlayerId || "") &&
+      String(player.name || "").trim().toLowerCase() === normalizedName
+  );
+
+  if (duplicate) {
+    const duplicateError = new Error(
+      "A player with this name and date of birth already exists"
     );
-
-    if (duplicate) {
-      const duplicateError = new Error(
-        "A player with this primary contact number already exists"
-      );
-      duplicateError.statusCode = 409;
-      throw duplicateError;
-    }
+    duplicateError.statusCode = 409;
+    throw duplicateError;
   }
 }
 
@@ -722,8 +704,8 @@ router.post("/", auth, async (req, res) => {
 
     await ensureDuplicateFree({
       academyId: payload.academy_id,
-      email: payload.email,
-      contactNumber1: payload.contact_number_1
+      name: payload.name,
+      dob: payload.dob
     });
 
     let parentUser = null;
@@ -810,8 +792,8 @@ router.put("/:id", auth, async (req, res) => {
 
     await ensureDuplicateFree({
       academyId: payload.academy_id,
-      email: payload.email,
-      contactNumber1: payload.contact_number_1,
+      name: payload.name,
+      dob: payload.dob,
       excludePlayerId: req.params.id
     });
 
