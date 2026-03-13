@@ -5,6 +5,49 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>AlphaGrips Admin</title>
     <link rel="stylesheet" href="./css/dashboard.css" />
+    <style>
+      .session-chip {
+        display: grid;
+        gap: 2px;
+        min-width: 0;
+        max-width: 240px;
+        padding: 7px 10px;
+        border-radius: 14px;
+        background: rgba(255, 255, 255, 0.12);
+        border: 1px solid rgba(255, 255, 255, 0.16);
+        color: #f7f4ef;
+        text-align: right;
+      }
+
+      .session-chip-label {
+        font-size: 0.62rem;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: rgba(247, 244, 239, 0.72);
+      }
+
+      .session-chip strong {
+        font-size: 0.84rem;
+        line-height: 1.15;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .session-chip-meta {
+        font-size: 0.72rem;
+        color: rgba(247, 244, 239, 0.76);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      @media (max-width: 900px) {
+        .session-chip {
+          display: none;
+        }
+      }
+    </style>
     <script src="../shared/portalAccess.js"></script>
     <script>
       (function () {
@@ -35,6 +78,11 @@
           </div>
         </div>
         <div class="topbar-right">
+          <div class="session-chip" id="sessionChip" hidden>
+            <span class="session-chip-label" id="sessionRoleLabel">Role</span>
+            <strong id="sessionName">User</strong>
+            <span class="session-chip-meta" id="sessionAcademy">Academy scope</span>
+          </div>
           <button onclick="logout()" class="btn btn-ghost">Logout</button>
         </div>
       </header>
