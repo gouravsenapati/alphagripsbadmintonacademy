@@ -1119,17 +1119,59 @@ export async function updateTournamentRegistration({
         entry: updatedEntry
       }).catch(() => null)
     : null;
-  const eventId = event?.id || null;
-  const response = toRegistrationResponse(
-    updatedRegistration,
-    updatedEntry ? { ...updatedEntry, event_id: eventId } : null
-  );
+  const transitionedToPaid =
+    registration.payment_status !== updatedRegistration.payment_status &&
+    updatedRegistration.payment_status === "paid";
+  let finalRegistration = updatedRegistration;
+  let finalEntry = updatedEntry
+    ? { ...updatedEntry, event_id: event?.id || null }
+    : null;
+  let finalParticipant = null;
+
+  if (transitionedToPaid && updatedEntry && event) {
+    const participantSync = await syncRegistrationEntryToParticipant({
+      tournamentId,
+      registration: updatedRegistration,
+      entry: updatedEntry,
+      event
+    });
+
+    finalEntry = participantSync.updatedEntry;
+    finalParticipant = participantSync.participant;
+
+    const participantNote = appendUniqueRegistrationNote(
+      updatedRegistration.notes,
+      participantSync.participantCreated
+        ? `Payment confirmation auto-added to participants: ${participantSync.participant.id}`
+        : `Payment confirmation matched existing participant: ${participantSync.participant.id}`
+    );
+
+    if (participantNote !== (updatedRegistration.notes || "")) {
+      const { data: notedRegistration, error: notesUpdateError } = await tournamentDb
+        .from("registrations")
+        .update({
+          notes: participantNote,
+          updated_at: new Date().toISOString()
+        })
+        .eq("id", registrationId)
+        .select("*")
+        .single();
+
+      if (notesUpdateError) {
+        throw new AppError(notesUpdateError.message, 500);
+      }
+
+      finalRegistration = notedRegistration;
+    }
+  }
+
+  const response = toRegistrationResponse(finalRegistration, finalEntry, finalParticipant);
   const emailAddress = response.email;
   let emailDelivery = null;
 
   if (emailAddress) {
     const decision =
-      updatedEntry?.status && updatedEntry.status !== "submitted" ? updatedEntry.status : null;
+      finalEntry?.status && finalEntry.status !== "submitted" ? finalEntry.status : null;
 
     if (decision) {
       emailDelivery = await sendRegistrationDecisionEmail({
