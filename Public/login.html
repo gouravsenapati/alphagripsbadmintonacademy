@@ -295,19 +295,21 @@ body {
         </div>
       </div>
 
-      <div class="field">
-        <label for="email">Email</label>
-        <input id="email" type="email" placeholder="Enter your email" />
-      </div>
+      <form id="loginForm">
+        <div class="field">
+          <label for="email">Email</label>
+          <input id="email" type="email" placeholder="Enter your email" />
+        </div>
 
-      <div class="field">
-        <label for="password">Password</label>
-        <input id="password" type="password" placeholder="Enter your password" />
-      </div>
+        <div class="field">
+          <label for="password">Password</label>
+          <input id="password" type="password" placeholder="Enter your password" />
+        </div>
 
-      <button class="primary-btn" onclick="login()" id="loginButton">Login to Academy</button>
+        <button class="primary-btn" type="submit" id="loginButton">Login to Academy</button>
 
-      <p class="error" id="error"></p>
+        <p class="error" id="error"></p>
+      </form>
 
       <div class="quick-links" id="quickLinks"></div>
     </div>
@@ -439,9 +441,14 @@ renderPortalContext();
 renderPortalPills();
 renderQuickLinks();
 
+document.getElementById("loginForm")?.addEventListener("submit", (event) => {
+  event.preventDefault();
+  window.login();
+});
+
 window.login = async function login() {
   document.getElementById("error").innerText = "";
-  ["token", "role", "role_id", "academy_id", "email"].forEach((key) => localStorage.removeItem(key));
+  ["token", "role", "role_id", "academy_id", "email", "name", "must_change_password"].forEach((key) => localStorage.removeItem(key));
 
   try {
     const res = await fetch(`${API}/auth/login`, {
@@ -467,10 +474,18 @@ window.login = async function login() {
     localStorage.setItem("role_id", data.role_id);
     localStorage.setItem("academy_id", data.academy_id);
     localStorage.setItem("email", data.email);
+    localStorage.setItem("name", data.name || "");
+    localStorage.setItem("must_change_password", String(Boolean(data.must_change_password)));
 
     const roleName = portalAccess.normalizeRoleName(data.role || data.role_name);
     const preferredPortal = portalAccess.getPreferredPortal(roleName, data.role_id);
     const defaultTarget = portalAccess.getPortalUrl(preferredPortal);
+    const finalTarget = redirectTarget || defaultTarget;
+
+    if (data.must_change_password) {
+      window.location.href = portalAccess.getChangePasswordUrl(finalTarget);
+      return;
+    }
 
     if (activePortal === "academy" && preferredPortal !== "academy") {
       window.location.href = defaultTarget;
@@ -487,7 +502,7 @@ window.login = async function login() {
       return;
     }
 
-    window.location.href = redirectTarget || defaultTarget;
+    window.location.href = finalTarget;
   } catch (error) {
     document.getElementById("error").innerText = "Server connection failed";
   }
